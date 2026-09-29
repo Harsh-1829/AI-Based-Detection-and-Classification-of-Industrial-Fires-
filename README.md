@@ -6,7 +6,6 @@
 > **Theme:** Disaster Management | **Category:** Software  
 > **Focus Region:** Jharkhand State, India (24 Districts, Jharia Coalfields, Bokaro, Ramgarh, Jamshedpur)  
 > **Validated Model Performance:** **81.69% Test Accuracy** | **83.06% Weighted F1-Score** | **71.62% Balanced Accuracy**  
-> **Live Web Platform:** [https://thermalintell.onrender.com](https://thermalintell.onrender.com)  
 
 ---
 
