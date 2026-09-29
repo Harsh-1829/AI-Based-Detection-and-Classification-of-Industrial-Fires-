@@ -9,7 +9,7 @@
 
 ---
 
-## 📌 Executive Summary
+## Executive Summary
 
 Satellite active fire monitoring systems (such as NASA FIRMS) detect thermal anomalies from orbit but treat every hotspot as a generic heat dot. They cannot distinguish whether an anomaly is a steel plant blast furnace running normally in Bokaro, an underground coal seam fire in Jharia, an open-cast blasting operation, a hazardous forest wildfire in Saranda, or seasonal crop residue burning.
 
@@ -17,33 +17,33 @@ Satellite active fire monitoring systems (such as NASA FIRMS) detect thermal ano
 
 ---
 
-## 🚀 Key Platform Innovations & Capabilities
+## Key Platform Innovations & Capabilities
 
-### 1. 🏭 5-Class Cost-Weighted AI Classifier (Model B)
+### 1. 5-Class Cost-Weighted AI Classifier (Model B)
 * Classifies satellite thermal events into 5 verified operational categories:
-  * 🏭 **Industrial Facilities** (Power plants, steel mills, refineries, brick kilns) — *97.0% Precision | 94.0% F1*
-  * ⛏️ **Quarry / Mining Operations** (Open-cast coal mines, blasting zones, Jharia coalfield fires) — *85.4% Precision | 90.9% F1*
-  * 🌲 **Forest Wildfires** (Protected forest reserves, canopy fires) — *92.9% Precision | 85.3% F1*
-  * 🌾 **Agricultural Stubble Burning** (Crop residue fires)
-  * 🌿 **Vegetation & Scrub Fires** (Open scrub and roadside brush)
+  * **Industrial Facilities** (Power plants, steel mills, refineries, brick kilns) — *97.0% Precision | 94.0% F1*
+  * **Quarry / Mining Operations** (Open-cast coal mines, blasting zones, Jharia coalfield fires) — *85.4% Precision | 90.9% F1*
+  * **Forest Wildfires** (Protected forest reserves, canopy fires) — *92.9% Precision | 85.3% F1*
+  * **Agricultural Stubble Burning** (Crop residue fires)
+  * **Vegetation & Scrub Fires** (Open scrub and roadside brush)
 * Uses cost-sensitive sample weighting (`compute_sample_weight('balanced')`) to resolve extreme class imbalance between routine scrub fires and critical industrial flares.
 
-### 2. 🛰️ Multi-Source Geospatial & Satellite Fusion
+### 2. Multi-Source Geospatial & Satellite Fusion
 * **NASA FIRMS Ingestion:** Automated connection to the NASA FIRMS Ultra-Real-Time (URT) and Near-Real-Time (NRT) API for VIIRS sensors (NOAA-21, NOAA-20, Suomi-NPP) at **375m spatial resolution**.
 * **10m ESA WorldCover:** Pixel-level land cover queries identifying ground-level surface composition across 11 standard ESA classes.
 * **3,913 OSM Industrial Assets:** Sub-millisecond $O(\log N)$ nearest-neighbor spatial queries via **SciPy cKDTree** against verified factories, power stations, and mine polygons across Jharkhand.
 * **18 Engineered Spatiotemporal Features:** Includes thermal differentials ($TI4 - TI5$), logarithmic Fire Radiative Power ($\log(FRP)$), day/night diurnal cycle embeddings, and multi-day temporal persistence metrics.
 
-### 3. 🌤️ Live Meteorological & Wildfire Feasibility Intelligence
+### 3. Live Meteorological & Wildfire Feasibility Intelligence
 * Integrated with Open-Meteo REST API at exact detection coordinates.
 * Pulls live **ambient temperature (°C)**, **relative humidity (%)**, **precipitation (mm)**, and **wind speed (km/h)**.
 * Computes an environmental wildfire feasibility verdict to determine if meteorological conditions can sustain or spread open flame vs. enclosed industrial heat.
 
-### 4. 🔬 375m Optical Footprint Sub-Pixel Validation
+### 4.  375m Optical Footprint Sub-Pixel Validation
 * Decomposes the 375m VIIRS sensor footprint against underlying 10m ESA WorldCover pixels.
 * Samples up to 1,000 sub-pixels to detect mixed-pixel edge cases (e.g. an industrial facility bordering a forest or scrubland) and displays the dominant land-cover percentage.
 
-### 5. 🚨 Automated Multi-Agency Emergency Alert Dispatcher
+### 5. Automated Multi-Agency Emergency Alert Dispatcher
 * **Automated Severity Triage:** Categorizes anomalies into `CRITICAL` (FRP $\ge$ 50 MW or high-confidence industrial/forest), `HIGH`, or `MODERATE`.
 * **Multi-Agency Simultaneous Routing:** Dispatches automated emergency notifications with response SLAs (5 min for Critical, 15 min for High, 45 min for Moderate) to:
   * **NDRF** (National Disaster Response Force)
@@ -53,18 +53,18 @@ Satellite active fire monitoring systems (such as NASA FIRMS) detect thermal ano
   * **Local Fire & Emergency Services**
 * Tracks all dispatches in an auditable in-memory session log (`/api/dispatch/log`).
 
-### 6. 📄 Official Executive PDF Incident Report Generator
+### 6. Official Executive PDF Incident Report Generator
 * Pure browser-native A4 printable dossier engine (no bulky external PDF server dependencies).
 * Inlines official state headers, SIH 26162 project identification, dynamic severity color banners, 7 structured intelligence sections, XGBoost class probabilities, and official response directives.
 
-### 7. 🗺️ Command Web GIS Dashboard & AI Simulator
+### 7. Command Web GIS Dashboard & AI Simulator
 * Built with a dark-warm **Cowboy Space aesthetic** (`#1f1509` background, `#c14f09` burnt-orange accents, `#f9f7f3` warm ivory typography).
 * Interactive Leaflet.js canvas with client-side GPU **Leaflet-Heat** rendering, multi-layer filter drawers, district zoom jumps, and dynamic Chart.js analytics.
 * **What-If AI Simulator:** Real-time sandbox allowing operators to feed custom coordinates, FRP, and satellite brightness temperatures to evaluate Model B inference on demand.
 
 ---
 
-## 📁 Repository Directory Structure
+## Repository Directory Structure
 
 ```
 ├── run_server.py                          # Launcher: Boots central database, FastAPI backend & GIS UI
@@ -115,7 +115,7 @@ Satellite active fire monitoring systems (such as NASA FIRMS) detect thermal ano
 
 ---
 
-## 🚀 Quickstart & Setup Guide
+## Quickstart & Setup Guide
 
 ### 1. Environment Setup
 Clone the repository and install the verified dependencies:
@@ -158,7 +158,7 @@ python train_model.py
 
 ---
 
-## 📊 Model B Evaluation & Benchmark Report
+## Model B Evaluation & Benchmark Report
 
 Evaluated on an independent test dataset of **19,144 ground-truth labeled VIIRS detections** across Jharkhand State (2022):
 
@@ -182,7 +182,7 @@ Evaluated on an independent test dataset of **19,144 ground-truth labeled VIIRS 
 
 ---
 
-## 🌐 REST API Reference
+## REST API Reference
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
@@ -198,7 +198,7 @@ Evaluated on an independent test dataset of **19,144 ground-truth labeled VIIRS 
 
 ---
 
-## 👥 Team Deadlock — Smart India Hackathon 2026
+##  Team Deadlock_1 — Smart India Hackathon 2026
 
 * **Problem Statement:** SIH26162 — AI-Based Detection and Classification of Industrial Fires & Persistent Thermal Sources  
 * **Theme:** Disaster Management  
