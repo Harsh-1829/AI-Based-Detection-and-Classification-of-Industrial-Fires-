@@ -1,5 +1,5 @@
 /* ============================================================
-   THERMALINTELL — Cowboy Space Dark-Warm Aesthetic
+   THERMALINTELL â€” Cowboy Space Dark-Warm Aesthetic
    Palette Reference: cowboyspace.com
    --bg-primary:    #1f1509  (Cowboy Space Near-Black Warm Brown)
    --bg-secondary:  #2a1f0e  (Deep Panel Dark)
@@ -10,7 +10,7 @@
    ============================================================ */
 
 :root {
-    /* ── COWBOY SPACE CORE BACKGROUNDS ── */
+    /* â”€â”€ COWBOY SPACE CORE BACKGROUNDS â”€â”€ */
     --bg-primary:            #1f1509; /* Cowboy Space near-black warm brown */
     --bg-secondary:          #2a1f0e; /* Lifted panel surface */
     --bg-tertiary:           #3d2e18; /* Card / elevated surface */
@@ -21,44 +21,44 @@
     --bg-card-deep:          #140f06; /* Deeper inset */
     --panel-bg:              #2a1f0e;
 
-    /* ── TYPOGRAPHY ── */
-    --text-primary:          #f9f7f3; /* Warm ivory — dominant text */
-    --text-secondary:        #c4b89a; /* Warm sand — secondary text */
+    /* â”€â”€ TYPOGRAPHY â”€â”€ */
+    --text-primary:          #f9f7f3; /* Warm ivory â€” dominant text */
+    --text-secondary:        #c4b89a; /* Warm sand â€” secondary text */
     --text-muted:            #9c9180; /* Muted warm grey */
-    --text-color-black:      #f9f7f3; /* Legacy alias → now ivory on dark */
+    --text-color-black:      #f9f7f3; /* Legacy alias â†’ now ivory on dark */
     --text-color:            #f9f7f3;
     --about-color:           #c14f09; /* Accent: burnt orange (used for emphasis) */
     --white:                 #f9f7f3;
     --grey-color:            #9c9180;
 
-    /* ── COWBOY SPACE ACCENT SYSTEM ── */
+    /* â”€â”€ COWBOY SPACE ACCENT SYSTEM â”€â”€ */
     --accent:                #c14f09; /* Primary burnt-sienna orange */
     --accent-hover:          #e05a0a; /* Hover state */
-    --accent-hi:             #ff7443; /* Vivid flame — highlights & glows */
+    --accent-hi:             #ff7443; /* Vivid flame â€” highlights & glows */
     --accent-muted:          rgba(193, 79, 9, 0.18); /* Accent fill overlay */
     --accent-glow:           rgba(255, 116, 67, 0.22);
 
-    /* ── FIRE CLASS PALETTE (refined for dark bg) ── */
-    --color-industrial:      #c14f09; /* Burnt orange — main accent */
+    /* â”€â”€ FIRE CLASS PALETTE (refined for dark bg) â”€â”€ */
+    --color-industrial:      #c14f09; /* Burnt orange â€” main accent */
     --color-forest:          #6b9956; /* Forest green */
     --color-quarry:          #c49a3c; /* Warm gold ochre */
     --color-agri:            #a8863e; /* Harvest amber */
     --color-vegetation:      #7a9e7e; /* Sage green */
     --color-sage:            #7a9e7e; /* Alias */
 
-    /* ── BORDER & DIVIDERS ── */
+    /* â”€â”€ BORDER & DIVIDERS â”€â”€ */
     --border-color:          rgba(196, 184, 154, 0.12); /* Warm ivory border, subtle */
     --border-subtle:         rgba(196, 184, 154, 0.08);
     --border-light:          rgba(196, 184, 154, 0.06);
     --border-dark:           rgba(196, 184, 154, 0.20);
     --border-accent:         rgba(193, 79, 9, 0.40);
 
-    /* ── FUNCTIONAL MAPPINGS ── */
+    /* â”€â”€ FUNCTIONAL MAPPINGS â”€â”€ */
     --bg-base:               var(--bg-primary);
     --bg-surface:            var(--bg-secondary);
     --bg-surface-elevated:   var(--bg-tertiary);
 
-    /* ── RADII & SHADOWS ── */
+    /* â”€â”€ RADII & SHADOWS â”€â”€ */
     --radius-sm:             6px;
     --radius-md:             8px;
     --radius-lg:             12px;
@@ -74,7 +74,7 @@
     --transition-fast:       0.18s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal:     0.28s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* ── FONT STACK ── */
+    /* â”€â”€ FONT STACK â”€â”€ */
     --font-ui:               'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono:             'JetBrains Mono', 'Fira Code', monospace;
 }
@@ -111,7 +111,7 @@ body::before { display: none; }
 }
 
 /* ============================================================
-   TOP NAVIGATION BAR — Cowboy Space Dark Warm
+   TOP NAVIGATION BAR â€” Cowboy Space Dark Warm
    ============================================================ */
 .top-navbar {
     height: 56px;
@@ -223,7 +223,7 @@ body::before { display: none; }
     animation: none;
 }
 
-/* ── KPI TICKER ── */
+/* â”€â”€ KPI TICKER â”€â”€ */
 .navbar-center {
     display: flex;
     align-items: center;
@@ -293,7 +293,7 @@ body::before { display: none; }
     flex-shrink: 0;
 }
 
-/* ── BUTTONS — Cowboy Space Style ── */
+/* â”€â”€ BUTTONS â€” Cowboy Space Style â”€â”€ */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -391,7 +391,7 @@ body::before { display: none; }
 }
 
 /* ============================================================
-   MAIN WORKSPACE & SIDEBAR — Cowboy Space Dark Panels
+   MAIN WORKSPACE & SIDEBAR â€” Cowboy Space Dark Panels
    ============================================================ */
 .main-workspace {
     flex: 1;
@@ -410,7 +410,7 @@ body::before { display: none; }
     position: relative;
 }
 
-/* ── SIDEBAR FILTERS ── */
+/* â”€â”€ SIDEBAR FILTERS â”€â”€ */
 .sidebar-filters {
     width: 310px;
     min-width: 310px;
@@ -587,7 +587,7 @@ body::before { display: none; }
     border: 1px solid var(--border-color);
 }
 
-/* ── SLIDERS & CONTROLS ── */
+/* â”€â”€ SLIDERS & CONTROLS â”€â”€ */
 .slider-container {
     display: flex;
     flex-direction: column;
@@ -1076,7 +1076,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     letter-spacing: 0.6px;
 }
 
-/* ── PROBABILITY BARS ── */
+/* â”€â”€ PROBABILITY BARS â”€â”€ */
 .prob-bars {
     display: flex;
     flex-direction: column;
@@ -1111,7 +1111,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     transition: width 0.4s ease;
 }
 
-/* ── METRICS GRID ── */
+/* â”€â”€ METRICS GRID â”€â”€ */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1223,7 +1223,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-weight: 700;
 }
 
-/* ── SIMULATOR FORM ── */
+/* â”€â”€ SIMULATOR FORM â”€â”€ */
 .sim-form {
     display: flex;
     flex-direction: column;
@@ -1981,7 +1981,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .hidden { display: none !important; }
 
-/* ── TOAST NOTIFICATIONS ── */
+/* â”€â”€ TOAST NOTIFICATIONS â”€â”€ */
 .toast-container {
     position: fixed;
     top: 65px;
@@ -2369,8 +2369,46 @@ body.modal-open { overflow: hidden; }
     box-shadow: 0 4px 16px rgba(184, 66, 38, 0.18);
 }
 
+/* Dispatch & PDF Actions Row */
+.dispatch-actions-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    width: 100%;
+}
+.dispatch-actions-row .btn-dispatch {
+    flex: 1;
+    margin-top: 0;
+}
+.btn-pdf-export {
+    flex: 1;
+    padding: 9px 14px;
+    border: 1.5px solid var(--accent, #c14f09);
+    color: var(--accent, #c14f09);
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    background: rgba(193, 79, 9, 0.08);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-family: var(--font-ui);
+    white-space: nowrap;
+}
+.btn-pdf-export:hover {
+    background: rgba(193, 79, 9, 0.2);
+    color: #ff8547;
+    border-color: #ff8547;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(193, 79, 9, 0.24);
+}
+
+
 /* ================================================================== */
-/* LEAFLET POPUP � COWBOY SPACE DARK THEME OVERRIDE                   */
+/* LEAFLET POPUP — COWBOY SPACE DARK THEME OVERRIDE                   */
 /* ================================================================== */
 .leaflet-popup-content-wrapper {
     background: #2a1f0e !important;
@@ -2409,4 +2447,4 @@ body.modal-open { overflow: hidden; }
 .live-pulse-dot.live-green {
     background: #7ac470 !important;
     box-shadow: 0 0 6px rgba(122, 196, 112, 0.6) !important;
-}
+}

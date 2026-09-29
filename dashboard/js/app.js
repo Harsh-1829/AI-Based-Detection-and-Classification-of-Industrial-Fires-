@@ -32,6 +32,7 @@
         autoSyncInterval: null,
         _initialBoundsFitted: false,
     };
+    window.__appState = state;
 
     // Color definitions — Cowboy Space Dark-Warm Palette
     const CLASS_COLORS = {

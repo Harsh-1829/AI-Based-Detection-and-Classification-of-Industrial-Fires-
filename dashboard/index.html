@@ -127,6 +127,10 @@
                     <span>Dispatch Log</span>
                     <span id="alert-log-badge" class="alert-log-badge hidden">0</span>
                 </button>
+                <button id="btn-export-incident-pdf" class="btn btn-glass" title="Generate Official Incident Report PDF" onclick="window.PDFReporter && window.PDFReporter.generate(window.__lastDetection)">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Incident PDF</span>
+                </button>
             </div>
         </header>
 
@@ -610,10 +614,16 @@
                                     <i class="fa-solid fa-triangle-exclamation"></i>
                                     <span id="dispatch-hint-text">Severity will be auto-computed from FRP &amp; AI confidence.</span>
                                 </div>
-                                <button id="btn-dispatch-alerts" class="btn btn-dispatch btn-block" onclick="window.AlertDispatcher && window.AlertDispatcher.openForDetection(window.__lastDetection || {})">
-                                    <i class="fa-solid fa-paper-plane"></i>
-                                    <span>Dispatch Emergency Alerts</span>
-                                </button>
+                                <div class="dispatch-actions-row">
+                                    <button id="btn-dispatch-alerts" class="btn btn-dispatch" onclick="window.AlertDispatcher && window.AlertDispatcher.openForDetection(window.__lastDetection || {})">
+                                        <i class="fa-solid fa-paper-plane"></i>
+                                        <span>Dispatch Alerts</span>
+                                    </button>
+                                    <button id="btn-export-pdf" class="btn btn-pdf-export" onclick="window.PDFReporter && window.PDFReporter.generate(window.__lastDetection)" title="Export Official Fire Incident PDF Report">
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                        <span>Official PDF</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -850,6 +860,9 @@
                     <button id="adm-btn-dispatch" class="btn adm-dispatch-btn">
                         <i class="fa-solid fa-paper-plane"></i> Dispatch All Alerts
                     </button>
+                    <button id="adm-btn-pdf" class="btn btn-glass" onclick="window.PDFReporter && window.PDFReporter.generate(window.__lastDetection)" title="Generate official printable incident report">
+                        <i class="fa-solid fa-file-pdf"></i> PDF Report
+                    </button>
                     <button class="btn btn-glass" onclick="document.getElementById('alert-dispatch-modal').classList.remove('active'); document.body.classList.remove('modal-open');">
                         <i class="fa-solid fa-xmark"></i> Close
                     </button>
@@ -911,9 +924,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Custom Application Scripts -->
-    <script src="/static/js/charts.js?v=2026_milkin_v11"></script>
-    <script src="/static/js/alert-dispatcher.js?v=2026_milkin_v12"></script>
-    <script src="/static/js/app.js?v=2026_milkin_v12"></script>
+    <script src="/static/js/charts.js?v=2026_cowboy_v1"></script>
+    <script src="/static/js/alert-dispatcher.js?v=2026_cowboy_v1"></script>
+    <script src="/static/js/pdf-reporter.js?v=2026_cowboy_v1"></script>
+    <script src="/static/js/app.js?v=2026_cowboy_v1"></script>
 </body>
 
 </html>
