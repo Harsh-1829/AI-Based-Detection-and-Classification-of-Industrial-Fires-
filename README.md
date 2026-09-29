@@ -1,4 +1,4 @@
-# 🔥 ThermalIntell: AI-Enabled Geospatial Thermal Anomaly & Industrial Fire Intelligence Platform
+# ThermalIntell: AI-Enabled Geospatial Thermal Anomaly & Industrial Fire Intelligence Platform
 
 > **Smart India Hackathon (SIH 2026)**  
 > **Problem Statement ID:** SIH26162  
