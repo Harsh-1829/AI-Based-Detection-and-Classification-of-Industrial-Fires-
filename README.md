@@ -203,5 +203,4 @@ Evaluated on an independent test dataset of **19,144 ground-truth labeled VIIRS 
 
 * **Problem Statement:** SIH26162 — AI-Based Detection and Classification of Industrial Fires & Persistent Thermal Sources  
 * **Theme:** Disaster Management  
-* **Live Deployment:** [https://thermalintell.onrender.com](https://thermalintell.onrender.com)  
 * **Codebase:** [https://github.com/Harsh-1829/AI-Based-Detection-and-Classification-of-Industrial-Fires-](https://github.com/Harsh-1829/AI-Based-Detection-and-Classification-of-Industrial-Fires-)
