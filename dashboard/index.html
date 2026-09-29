@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="AI-Enabled Geospatial Thermal Anomaly Classification & Industrial Fire Monitoring Dashboard for Jharkhand using NASA FIRMS and XGBoost Model B.">
+    <title>THERMALINTELL | Geospatial Thermal Anomaly & Industrial Fire AI Platform</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css?v=noaa21">
+</head>
+
+<body class="dark-theme">
+    <!-- Main Application Shell -->
+    <div id="app-container" class="app-container">
+
+        <!-- Top Navigation Bar -->
+        <header id="top-navbar" class="top-navbar">
+            <div class="navbar-left">
+                <div class="brand-logo">
+                    <div class="logo-icon-wrap">
+                        <i class="fa-solid fa-fire-flame-curved logo-icon"></i>
+                        <span class="logo-pulse"></span>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">THERMALINTELL</span>
+                        <span class="brand-subtitle">AI Thermal Intelligence • SIH 26162</span>
+                    </div>
+                </div>
+
+                <div class="region-pill">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Jharkhand Basin</span>
+                    <span class="tag-live">VIIRS NOAA-21 (URT+NRT)</span>
+                </div>
+            </div>
+
+            <div class="navbar-center">
+                <div class="kpi-ticker">
+                    <div class="kpi-chip" id="kpi-total">
+                        <span class="kpi-label">TOTAL ANOMALIES</span>
+                        <span class="kpi-val" id="val-total-count">--</span>
+                    </div>
+                    <div class="kpi-divider"></div>
+                    <div class="kpi-chip chip-industrial">
+                        <span class="kpi-dot"></span>
+                        <span class="kpi-label">INDUSTRIAL</span>
+                        <span class="kpi-val" id="val-industrial-count">--</span>
+                    </div>
+                    <div class="kpi-divider"></div>
+                    <div class="kpi-chip chip-forest">
+                        <span class="kpi-dot"></span>
+                        <span class="kpi-label">FOREST FIRE</span>
+                        <span class="kpi-val" id="val-forest-count">--</span>
+                    </div>
+                    <div class="kpi-divider"></div>
+                    <div class="kpi-chip chip-quarry">
+                        <span class="kpi-dot"></span>
+                        <span class="kpi-label">MINING/QUARRY</span>
+                        <span class="kpi-val" id="val-quarry-count">--</span>
+                    </div>
+                    <div class="kpi-divider"></div>
+                    <div class="kpi-chip chip-agri">
+                        <span class="kpi-dot"></span>
+                        <span class="kpi-label">AGRI BURNING</span>
+                        <span class="kpi-val" id="val-agri-count">--</span>
+                    </div>
+                    <div class="kpi-divider"></div>
+                    <div class="kpi-chip chip-max-frp">
+                        <span class="kpi-label">MAX FRP</span>
+                        <span class="kpi-val" id="val-max-frp">-- MW</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="navbar-right">
+                <button id="btn-realtime-toggle" class="btn btn-live-mode"
+                    title="View Real-Time NASA FIRMS Live Thermal Anomalies">
+                    <span class="live-pulse-dot"></span>
+                    <span id="realtime-btn-label">🔴 Live FIRMS Feed</span>
+                </button>
+                <button id="btn-fetch-firms" class="btn btn-primary glow-btn"
+                    title="Sync & Ingest NASA FIRMS Real-time URT API">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    <span>Sync NASA FIRMS</span>
+                </button>
+                <button id="btn-toggle-analytics" class="btn btn-glass" title="Toggle Analytics Charts Drawer">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Analytics</span>
+                </button>
+                <button id="btn-toggle-inspector" class="btn btn-glass" title="Test Custom Thermal Coordinate">
+                    <i class="fa-solid fa-crosshairs"></i>
+                    <span>AI Simulator</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace: Sidebar + Map View + Inspector -->
+        <main id="main-workspace" class="main-workspace">
+
+            <!-- Left Controls & Filter Drawer -->
+            <aside id="sidebar-filters" class="sidebar-filters glass-panel">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">
+                        <i class="fa-solid fa-sliders"></i>
+                        <h3>Spatial Filters & Layers</h3>
+                    </div>
+                    <button id="btn-reset-filters" class="btn-icon" title="Reset all filters">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                </div>
+
+                <div class="sidebar-content custom-scroll">
+                    <!-- Layer Categories -->
+                    <div class="filter-section">
+                        <label class="section-heading">
+                            <span>Classification Layers</span>
+                            <span class="badge" id="visible-layers-count">5 Active</span>
+                        </label>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="layer-industrial" checked data-class="Industrial">
+                                <span class="checkmark color-industrial"></span>
+                                <span class="layer-title"><i class="fa-solid fa-industry"></i> Industrial
+                                    Facilities</span>
+                            </label>
+                            <span class="layer-count" id="count-industrial">0</span>
+                        </div>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="layer-forest" checked data-class="Forest fire">
+                                <span class="checkmark color-forest"></span>
+                                <span class="layer-title"><i class="fa-solid fa-tree"></i> Forest Fires</span>
+                            </label>
+                            <span class="layer-count" id="count-forest">0</span>
+                        </div>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="layer-quarry" checked data-class="Quarry/Mining">
+                                <span class="checkmark color-quarry"></span>
+                                <span class="layer-title"><i class="fa-solid fa-mountain"></i> Quarry & Open
+                                    Mines</span>
+                            </label>
+                            <span class="layer-count" id="count-quarry">0</span>
+                        </div>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="layer-agri" checked data-class="Agricultural burning">
+                                <span class="checkmark color-agri"></span>
+                                <span class="layer-title"><i class="fa-solid fa-wheat-awn"></i> Agricultural
+                                    Stubble</span>
+                            </label>
+                            <span class="layer-count" id="count-agri">0</span>
+                        </div>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="layer-vegetation" checked
+                                    data-class="Vegetation fire (open/scrub)">
+                                <span class="checkmark color-vegetation"></span>
+                                <span class="layer-title"><i class="fa-solid fa-leaf"></i> Vegetation / Scrub
+                                    Fire</span>
+                            </label>
+                            <span class="layer-count" id="count-vegetation">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Overlay Toggles -->
+                    <div class="filter-section">
+                        <label class="section-heading">
+                            <span>Visualization Overlays</span>
+                        </label>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="toggle-boundary" checked>
+                                <span class="checkmark"
+                                    style="border-color: #00f0ff; background: rgba(0,240,255,0.25);"></span>
+                                <span class="layer-title"><i class="fa-solid fa-map"></i> Jharkhand State Border</span>
+                            </label>
+                        </div>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="toggle-heatmap">
+                                <span class="checkmark color-heat"></span>
+                                <span class="layer-title"><i class="fa-solid fa-fire"></i> FRP Heatmap Density</span>
+                            </label>
+                        </div>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="toggle-sources" checked>
+                                <span class="checkmark color-sources"></span>
+                                <span class="layer-title"><i class="fa-solid fa-bullseye"></i> Persistent Source
+                                    Clusters</span>
+                            </label>
+                        </div>
+
+                        <div class="layer-item">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="toggle-osm-overlay">
+                                <span class="checkmark color-osm"></span>
+                                <span class="layer-title"><i class="fa-solid fa-layer-group"></i> OSM Infrastructure
+                                    Outlines</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Sliders & Selectors -->
+                    <div class="filter-section">
+                        <label class="section-heading">
+                            <span>Confidence Threshold</span>
+                            <span class="slider-badge" id="conf-val-badge">≥ 50%</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="slider-confidence" min="0" max="100" value="50" step="5">
+                            <div class="slider-ticks">
+                                <span>0%</span>
+                                <span>50%</span>
+                                <span>90%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label class="section-heading">
+                            <span>Minimum FRP (Fire Radiative Power)</span>
+                            <span class="slider-badge" id="frp-val-badge">≥ 0 MW</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="slider-frp" min="0" max="50" value="0" step="2">
+                            <div class="slider-ticks">
+                                <span>0 MW</span>
+                                <span>25 MW</span>
+                                <span>50+ MW</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label class="section-heading">
+                            <span>Day / Night Pass</span>
+                        </label>
+                        <div class="btn-group-toggle" id="btn-group-daynight">
+                            <button class="btn-toggle active" data-val="ALL">All</button>
+                            <button class="btn-toggle" data-val="D"><i class="fa-solid fa-sun"></i> Day</button>
+                            <button class="btn-toggle" data-val="N"><i class="fa-solid fa-moon"></i> Night</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick District Jump -->
+                    <div class="filter-section">
+                        <label class="section-heading">
+                            <span>Focus Industrial Hub</span>
+                        </label>
+                        <select id="select-district-jump" class="custom-select">
+                            <option value="ALL">📍 Full Jharkhand View</option>
+                            <option value="DHANBAD">🏭 Dhanbad (Jharia Coalfields)</option>
+                            <option value="BOKARO">🏭 Bokaro (Steel City)</option>
+                            <option value="JAMSHEDPUR">🏭 Jamshedpur (Tata Industrial Zone)</option>
+                            <option value="RAMGARH">⛏️ Ramgarh / Barkakana Mines</option>
+                            <option value="RANCHI">🏙️ Ranchi Capital District</option>
+                            <option value="CHATRA">🌲 Chatra Forest Division</option>
+                        </select>
+                    </div>
+
+                    <!-- Base Map Selector -->
+                    <div class="filter-section">
+                        <label class="section-heading">
+                            <span>Base Map Engine</span>
+                        </label>
+                        <div class="basemap-grid">
+                            <button class="basemap-card active" data-map="google" title="Google Maps Satellite Hybrid">
+                                <i class="fa-brands fa-google"></i>
+                                <span>Google Satellite</span>
+                            </button>
+                            <button class="basemap-card" data-map="googleRoad" title="Google Maps Standard Roadmap">
+                                <i class="fa-solid fa-map-location-dot"></i>
+                                <span>Google Streets</span>
+                            </button>
+                            <button class="basemap-card" data-map="satellite" title="High-Res Esri Satellite Imagery">
+                                <i class="fa-solid fa-satellite"></i>
+                                <span>Esri Satellite</span>
+                            </button>
+                            <button class="basemap-card" data-map="osm" title="Standard OpenStreetMap">
+                                <i class="fa-solid fa-map"></i>
+                                <span>OpenStreetMap</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer / Status Info -->
+                <div class="sidebar-footer">
+                    <div class="model-badge">
+                        <i class="fa-solid fa-brain"></i>
+                        <span>XGBoost Model B (81.7% Acc)</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Interactive Map -->
+            <div id="map-viewport" class="map-viewport">
+                <div id="gis-map" class="gis-map"></div>
+
+                <!-- Live Feed Indicator Banner -->
+                <div id="realtime-status-banner" class="realtime-status-banner glass-card hidden">
+                    <div class="banner-content">
+                        <span class="live-pulse-dot"></span>
+                        <div class="banner-text">
+                            <span class="banner-badge">🛰️ LIVE NASA FIRMS</span>
+                            <span id="realtime-banner-msg">Fetching real-time VIIRS anomalies...</span>
+                        </div>
+                    </div>
+                    <div class="banner-actions">
+                        <button id="btn-realtime-days-toggle" class="btn btn-glass btn-xs" title="Change day window">
+                            <i class="fa-solid fa-clock-rotate-left"></i> <span id="label-realtime-days">5 Days
+                                Window</span>
+                        </button>
+                        <button id="btn-exit-realtime" class="btn btn-primary btn-xs">
+                            <i class="fa-solid fa-layer-group"></i> Full Baseline
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Map Overlay Floating Legend -->
+                <div id="map-floating-legend" class="map-floating-legend glass-card">
+                    <div class="legend-header">
+                        <span>Classification Legend</span>
+                        <button id="btn-minimize-legend" class="btn-icon-tiny"><i
+                                class="fa-solid fa-chevron-down"></i></button>
+                    </div>
+                    <div class="legend-body" id="legend-items-list">
+                        <div class="legend-row"><span class="legend-marker bg-industrial"></span> <span>Industrial
+                                (Refinery/Kiln/Steel)</span></div>
+                        <div class="legend-row"><span class="legend-marker bg-forest"></span> <span>Forest Fire
+                                (Wildfire)</span></div>
+                        <div class="legend-row"><span class="legend-marker bg-quarry"></span> <span>Quarry / Open-cast
+                                Mine</span></div>
+                        <div class="legend-row"><span class="legend-marker bg-agri"></span> <span>Agricultural Residue
+                                Burning</span></div>
+                        <div class="legend-row"><span class="legend-marker bg-vegetation"></span> <span>Vegetation Fire
+                                (Scrub/Open)</span></div>
+                        <div class="legend-row"><span class="legend-ring"></span> <span>Persistent Thermal Source
+                                Cluster</span></div>
+                    </div>
+                </div>
+
+                <!-- Live Map Coordinate & Zoom Display -->
+                <div id="map-coord-tag" class="map-coord-tag glass-card">
+                    <span id="coord-latlon">23.6500° N, 85.6000° E</span> |
+                    <span id="coord-zoom">Zoom: 7</span> |
+                    <span id="rendered-features-count">0 items rendered</span>
+                </div>
+            </div>
+
+            <!-- Right Detail & AI Simulator Panel (Collapsible) -->
+            <aside id="inspector-panel" class="inspector-panel glass-panel hidden">
+                <div class="inspector-header">
+                    <div class="inspector-title">
+                        <i class="fa-solid fa-microscope"></i>
+                        <h3 id="inspector-heading">Detection Intelligence</h3>
+                    </div>
+                    <button id="btn-close-inspector" class="btn-icon">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Tabs: Anomaly Details & What-If Simulator -->
+                <div class="inspector-tabs">
+                    <button class="tab-btn active" data-tab="tab-details">Anomaly Details</button>
+                    <button class="tab-btn" data-tab="tab-simulator">AI Classifier Simulator</button>
+                </div>
+
+                <div class="inspector-body custom-scroll">
+                    <!-- Tab 1: Anomaly Details (populated on point click) -->
+                    <div id="tab-details" class="tab-content active">
+                        <div id="detail-empty-state" class="empty-state">
+                            <i class="fa-solid fa-arrow-pointer"></i>
+                            <p>Click on any thermal point or persistent source cluster on the map to inspect its full AI
+                                telemetry, satellite brightness, and land-use analysis.</p>
+                        </div>
+
+                        <div id="detail-card" class="detail-card hidden">
+                            <!-- Header Info -->
+                            <div class="detail-hero">
+                                <div class="detail-badge-wrap">
+                                    <span id="detail-class-badge" class="badge-class bg-industrial">Industrial</span>
+                                    <span id="detail-conf-badge" class="badge-conf">94.8% Conf</span>
+                                </div>
+                                <h4 id="detail-title">Thermal Detection #<span id="detail-id">--</span></h4>
+                                <div class="detail-coords" id="detail-coords">23.7958° N, 86.4305° E</div>
+                            </div>
+
+                            <!-- Probability Distribution Meter -->
+                            <div class="detail-section">
+                                <div class="section-label">AI Class Probabilities (Model B)</div>
+                                <div class="prob-bars" id="detail-prob-bars">
+                                    <!-- Dynamic bars rendered here -->
+                                </div>
+                            </div>
+
+                            <!-- Satellite Thermal Metrics -->
+                            <div class="detail-section">
+                                <div class="section-label">Satellite Thermal Metrics</div>
+                                <div class="metrics-grid">
+                                    <div class="metric-box">
+                                        <span class="m-label">Fire Radiative Power</span>
+                                        <span class="m-val" id="detail-frp">-- MW</span>
+                                    </div>
+                                    <div class="metric-box">
+                                        <span class="m-label">Brightness Temp TI4</span>
+                                        <span class="m-val" id="detail-ti4">-- K</span>
+                                    </div>
+                                    <div class="metric-box">
+                                        <span class="m-label">Brightness Temp TI5</span>
+                                        <span class="m-val" id="detail-ti5">-- K</span>
+                                    </div>
+                                    <div class="metric-box">
+                                        <span class="m-label">TI4 - TI5 Diff</span>
+                                        <span class="m-val" id="detail-ti-diff">-- K</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Geospatial Context -->
+                            <div class="detail-section">
+                                <div class="section-label">Geospatial & Land Cover Context</div>
+                                <div class="context-list">
+                                    <div class="context-row">
+                                        <span class="c-title"><i class="fa-solid fa-earth-asia"></i> ESA
+                                            WorldCover:</span>
+                                        <span class="c-val" id="detail-landcover">Built-up</span>
+                                    </div>
+                                    <div class="context-row">
+                                        <span class="c-title"><i class="fa-solid fa-map-pin"></i> Nearest OSM
+                                            Entity:</span>
+                                        <span class="c-val" id="detail-osm-name">Tata Steel Jamshedpur</span>
+                                    </div>
+                                    <div class="context-row">
+                                        <span class="c-title"><i class="fa-solid fa-ruler-horizontal"></i> OSM
+                                            Proximity:</span>
+                                        <span class="c-val" id="detail-osm-dist">120 meters</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Persistence & Recurrence -->
+                            <div class="detail-section">
+                                <div class="section-label">Temporal Persistence</div>
+                                <div class="persistence-card">
+                                    <div class="p-item">
+                                        <span class="p-val" id="detail-persist-count">14</span>
+                                        <span class="p-sub">Detections at Source</span>
+                                    </div>
+                                    <div class="p-item">
+                                        <span class="p-val" id="detail-persist-days">8</span>
+                                        <span class="p-sub">Active Days</span>
+                                    </div>
+                                    <div class="p-item">
+                                        <span class="p-val" id="detail-persist-span">42d</span>
+                                        <span class="p-sub">Total Span</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: What-If Point Simulator -->
+                    <div id="tab-simulator" class="tab-content">
+                        <form id="form-simulator" class="sim-form">
+                            <p class="sim-intro">Feed custom satellite or sensor measurements into the 18-feature
+                                pipeline and evaluate XGBoost Model B inference in real time.</p>
+
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="sim-lat">Latitude (°N)</label>
+                                    <input type="number" id="sim-lat" step="0.0001" value="23.7958" required>
+                                </div>
+                                <div class="form-col">
+                                    <label for="sim-lon">Longitude (°E)</label>
+                                    <input type="number" id="sim-lon" step="0.0001" value="86.4305" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="sim-frp">FRP (MW)</label>
+                                    <input type="number" id="sim-frp" step="0.1" value="15.5" required>
+                                </div>
+                                <div class="form-col">
+                                    <label for="sim-conf">FIRMS Conf.</label>
+                                    <select id="sim-conf">
+                                        <option value="h">High (h)</option>
+                                        <option value="n" selected>Nominal (n)</option>
+                                        <option value="l">Low (l)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="sim-ti4">Bright TI4 (K)</label>
+                                    <input type="number" id="sim-ti4" step="0.1" value="335.0">
+                                </div>
+                                <div class="form-col">
+                                    <label for="sim-ti5">Bright TI5 (K)</label>
+                                    <input type="number" id="sim-ti5" step="0.1" value="298.0">
+                                </div>
+                            </div>
+
+                            <button type="submit" id="btn-run-sim" class="btn btn-primary btn-block">
+                                <i class="fa-solid fa-microchip"></i>
+                                <span>Run AI Classification</span>
+                            </button>
+                        </form>
+
+                        <div id="sim-result-box" class="sim-result-box hidden">
+                            <div class="sim-result-header">
+                                <span class="sim-result-label">Predicted Source:</span>
+                                <span id="sim-predicted-class" class="sim-pred-badge">Industrial</span>
+                            </div>
+                            <div class="sim-conf-score">
+                                <span>Model Confidence:</span>
+                                <strong id="sim-conf-score">96.4%</strong>
+                            </div>
+
+                            <div class="sim-enrich-info">
+                                <div><strong>Auto-Extracted Landcover:</strong> <span id="sim-landcover">Built-up</span>
+                                </div>
+                                <div><strong>Nearest OSM Entity:</strong> <span id="sim-osm">Coal Washery (350m)</span>
+                                </div>
+                            </div>
+
+                            <div id="sim-prob-bars" class="prob-bars"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Bottom Expandable Analytics Drawer -->
+        <div id="analytics-drawer" class="analytics-drawer glass-panel collapsed">
+            <div class="drawer-drag-bar" id="drawer-toggle-bar">
+                <div class="drawer-handle"></div>
+                <div class="drawer-bar-title">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Geospatial Intelligence & Analytics Hub</span>
+                    <span class="badge" id="stats-summary-pill">31,122 Records Ingested</span>
+                </div>
+                <button id="btn-drawer-collapse" class="btn-icon-tiny">
+                    <i class="fa-solid fa-chevron-up"></i>
+                </button>
+            </div>
+
+            <div class="drawer-content">
+                <div class="charts-grid">
+                    <!-- Chart 1: Class Share -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h5>Thermal Classification Breakdown</h5>
+                            <span class="chart-sub">Model B predictions across Jharkhand</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-class-distribution"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Timeline Anomaly Trends -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h5>Monthly Detection Trajectory</h5>
+                            <span class="chart-sub">Industrial vs Wildfire seasonal behavior</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-timeline"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 3: Radiative Power Distribution -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h5>Average Fire Radiative Power (MW)</h5>
+                            <span class="chart-sub">Thermal intensity profile by facility type</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-frp-by-class"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Leaderboard Table: Top Persistent Industrial Sources -->
+                    <div class="chart-card table-card">
+                        <div class="chart-header">
+                            <h5>Top Persistent Thermal Hotspots</h5>
+                            <span class="chart-sub">High-frequency recurring industrial & mining sites</span>
+                        </div>
+                        <div class="table-scroll-wrapper custom-scroll">
+                            <table class="hotspot-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cluster</th>
+                                        <th>Classification</th>
+                                        <th>Coordinates</th>
+                                        <th>Detections</th>
+                                        <th>Max FRP</th>
+                                        <th>Active Days</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="hotspot-table-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification Center -->
+        <div id="toast-container" class="toast-container"></div>
+
+    </div>
+
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIaBUtw8BvmtVZ2yBN4hmHXcEJZzUsHbk"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Leaflet Heat plugin -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom Application Scripts -->
+    <script src="/static/js/charts.js?v=noaa21"></script>
+    <script src="/static/js/app.js?v=noaa21"></script>
+</body>
+
+</html>

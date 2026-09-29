@@ -1,0 +1,47 @@
+{
+    "model_name": "Weighted XGBoost Model B",
+    "description": "Jharkhand VIIRS thermal-source multiclass classifier",
+    "target": "label_final",
+    "classes": [
+        "Agricultural burning",
+        "Forest fire",
+        "Industrial",
+        "Quarry/Mining",
+        "Vegetation fire (open/scrub)"
+    ],
+    "features": [
+        "latitude",
+        "longitude",
+        "bright_ti4",
+        "bright_ti5",
+        "scan",
+        "track",
+        "frp",
+        "confidence_ordinal",
+        "month_sin",
+        "month_cos",
+        "hour_sin",
+        "hour_cos",
+        "ti_diff",
+        "log_frp",
+        "worldcover_class",
+        "n_detections_at_source",
+        "unique_days_active",
+        "days_active_span"
+    ],
+    "num_classes": 5,
+    "class_weights": {
+        "Agricultural burning": 4.7322033898305085,
+        "Forest fire": 0.30619406913493596,
+        "Industrial": 1.572072072072072,
+        "Quarry/Mining": 1.8834322719913654,
+        "Vegetation fire (open/scrub)": 2.811115585984696
+    },
+    "training_samples": 34900,
+    "testing_samples": 19144,
+    "unclassified_predictions": 11978,
+    "test_accuracy": 0.8169139155871291,
+    "test_macro_f1": 0.6838620633583568,
+    "test_weighted_f1": 0.830641211814326,
+    "test_balanced_accuracy": 0.716181475295848
+}

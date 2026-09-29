@@ -1,0 +1,127 @@
+                         ┌─────────────────────┐
+                         │   NASA FIRMS API    │
+                         │   VIIRS Thermal     │
+                         │      Detections     │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │ DATA PREPROCESSING  │
+                         │                     │
+                         │ • Cleaning         │
+                         │ • Date/time         │
+                         │ • FRP              │
+                         │ • Brightness Temp. │
+                         │ • Confidence       │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │      GEOSPATIAL ENRICHMENT   │
+                    │                               │
+                    │  WorldCover + OSM + Location │
+                    └──────────────┬────────────────┘
+                                   │
+                                   ▼
+                    ┌───────────────────────────────┐
+                    │ THERMAL SOURCE IDENTIFICATION │
+                    │                               │
+                    │ Spatial + temporal grouping  │
+                    │ of repeated VIIRS detections │
+                    └──────────────┬────────────────┘
+                                   │
+                                   ▼
+                    ┌───────────────────────────────┐
+                    │     FEATURE ENGINEERING       │
+                    │                               │
+                    │ Thermal + temporal + spatial │
+                    │ + land-cover + persistence   │
+                    └──────────────┬────────────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
+                    ▼                             ▼
+             2021 LABELED DATA             2022 LABELED
+                    │                       VALIDATION
+                    ▼                             │
+              ┌───────────────┐                  │
+              │   XGBOOST ML  │◄─────────────────┘
+              │    TRAINING   │
+              └───────┬───────┘
+                      │
+                      ▼
+             ┌───────────────────┐
+             │ MODEL EVALUATION  │
+             │                   │
+             │ Accuracy          │
+             │ Macro-F1          │
+             │ Balanced Accuracy │
+             │ Confusion Matrix  │
+             └─────────┬─────────┘
+                       │
+                       ▼
+              VALIDATED MODEL
+                       │
+                       ▼
+              ┌─────────────────┐
+              │ NEW FIRMS DATA  │
+              │ / 2022 UNKNOWN  │
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │    XGBOOST      │
+              │   PREDICTION    │
+              └────────┬────────┘
+                       │
+                       ▼
+        ┌────────────────────────────────┐
+        │       SOURCE CLASSIFICATION    │
+        │                                │
+        │ • Industrial                   │
+        │ • Forest fire                  │
+        │ • Quarry/Mining                │
+        │ • Vegetation fire              │
+        │ • Agricultural burning         │
+        └────────────────┬───────────────┘
+                         │
+                         ▼
+              ┌────────────────────┐
+              │ PERSISTENCE /      │
+              │ RECURRENCE ANALYSIS│
+              │                    │
+              │ Repeated detections│
+              │ Active days        │
+              │ Time span          │
+              └─────────┬──────────┘
+                        │
+                        ▼
+             PERSISTENT THERMAL SOURCES
+                        │
+                        ▼
+              ┌─────────────────────┐
+              │ OSM CROSS-REFERENCE │
+              │                     │
+              │ Industrial facility │
+              │ Quarry              │
+              │ Kiln                │
+              │ Power plant etc.    │
+              └──────────┬──────────┘
+                         │
+                         ▼
+                FINAL GIS DATABASE
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │       GIS VISUALIZATION      │
+          │                              │
+          │ • Thermal points             │
+          │ • Source classes             │
+          │ • Persistent sources         │
+          │ • Industrial locations       │
+          │ • Land cover                 │
+          │ • Confidence                 │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+                 WEB GIS / DASHBOARD
