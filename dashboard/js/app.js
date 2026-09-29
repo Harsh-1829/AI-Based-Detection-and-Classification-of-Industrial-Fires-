@@ -33,13 +33,13 @@
         _initialBoundsFitted: false,
     };
 
-    // Color definitions — Max Milkin Palette
+    // Color definitions — Cowboy Space Dark-Warm Palette
     const CLASS_COLORS = {
-        "Industrial": "#b84226",
-        "Forest fire": "#3b4039",
-        "Quarry/Mining": "#a86e35",
-        "Agricultural burning": "#8f7b2c",
-        "Vegetation fire (open/scrub)": "#5e5469",
+        "Industrial": "#c14f09",
+        "Forest fire": "#6b9956",
+        "Quarry/Mining": "#c49a3c",
+        "Agricultural burning": "#a8863e",
+        "Vegetation fire (open/scrub)": "#7a9e7e",
     };
 
     const DISTRICT_BOUNDS = {
@@ -885,26 +885,26 @@
             const timeStr = p.acq_time ? ` (${p.acq_time} UTC)` : "";
 
             const popupHtml = `
-                <div style="min-width: 220px; font-family: Inter, sans-serif;">
+                <div style="min-width: 220px; font-family: Inter, sans-serif; background:#2a1f0e; padding:4px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                        <span style="background:${color}; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; text-transform:uppercase;">
+                        <span style="background:${color}; color:#f9f7f3; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; text-transform:uppercase;">
                             ${p.predicted_class}
                         </span>
-                        <span style="background:rgba(16,185,129,0.2); color:#34d399; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; border:1px solid rgba(52,211,153,0.35);">
+                        <span style="background:rgba(107,153,86,0.2); color:#7ac470; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; border:1px solid rgba(107,153,86,0.35);">
                             🟢 LIVE SATELLITE
                         </span>
                     </div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
-                        <strong>Location:</strong> ${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E
+                    <div style="font-size:11px; color:#c4b89a; margin-bottom:4px;">
+                        <strong style="color:#f9f7f3;">Location:</strong> ${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E
                     </div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
-                        <strong>FRP:</strong> <span style="color:#f87171; font-weight:700;">${p.frp ? p.frp.toFixed(1) : 'N/A'} MW</span> | 
-                        <strong>Brightness:</strong> ${p.bright_ti4 ? p.bright_ti4.toFixed(1) : 'N/A'} K
+                    <div style="font-size:11px; color:#c4b89a; margin-bottom:4px;">
+                        <strong style="color:#f9f7f3;">FRP:</strong> <span style="color:#ff7443; font-weight:700;">${p.frp ? p.frp.toFixed(1) : 'N/A'} MW</span> | 
+                        <strong style="color:#f9f7f3;">Brightness:</strong> ${p.bright_ti4 ? p.bright_ti4.toFixed(1) : 'N/A'} K
                     </div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
-                        <strong>AI Confidence:</strong> <span style="color:#4ade80; font-weight:700;">${confPct}%</span>
+                    <div style="font-size:11px; color:#c4b89a; margin-bottom:4px;">
+                        <strong style="color:#f9f7f3;">AI Confidence:</strong> <span style="color:#7ac470; font-weight:700;">${confPct}%</span>
                     </div>
-                    <div style="font-size:10.5px; color:#94a3b8; margin-top:6px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
+                    <div style="font-size:10.5px; color:#9c9180; margin-top:6px; border-top:1px solid rgba(196,184,154,0.12); padding-top:4px;">
                         📅 ${dateStr}${timeStr} • VIIRS NOAA-21 (${p.daynight === 'D' ? '☀️ Day' : '🌙 Night'})
                     </div>
                 </div>

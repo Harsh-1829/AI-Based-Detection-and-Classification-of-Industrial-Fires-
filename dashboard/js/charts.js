@@ -1,7 +1,7 @@
 /**
  * AGNI-VISION — GIS Analytics & Charts Module
  * Powered by Chart.js 4.x
- * Max Milkin Color Palette Aesthetic
+ * Cowboy Space Dark-Warm Palette
  */
 
 class DashboardCharts {
@@ -10,13 +10,13 @@ class DashboardCharts {
         this.timelineChart = null;
         this.frpChart = null;
 
-        // Max Milkin inspired classification palette
+        // Cowboy Space dark-warm classification palette
         this.colors = {
-            "Industrial": "#b84226",                    // Matte terracotta rust
-            "Forest fire": "#3b4039",                   // Slate olive charcoal
-            "Quarry/Mining": "#a86e35",                 // Warm raw umber
-            "Agricultural burning": "#8f7b2c",          // Antique gold / moss
-            "Vegetation fire (open/scrub)": "#5e5469",  // Muted slate mauve
+            "Industrial": "#c14f09",                    // Burnt sienna orange
+            "Forest fire": "#6b9956",                   // Forest green
+            "Quarry/Mining": "#c49a3c",                 // Warm gold ochre
+            "Agricultural burning": "#a8863e",          // Harvest amber
+            "Vegetation fire (open/scrub)": "#7a9e7e",  // Sage green
         };
     }
 
@@ -37,7 +37,7 @@ class DashboardCharts {
                 datasets: [{
                     data: [10106, 7427, 7335, 1114, 5140],
                     backgroundColor: Object.values(this.colors),
-                    borderColor: "#c2cabb",
+                    borderColor: "#1f1509",
                     borderWidth: 2,
                     hoverOffset: 4,
                 }]
@@ -49,17 +49,17 @@ class DashboardCharts {
                     legend: {
                         position: "bottom",
                         labels: {
-                            color: "#3b4039",
+                            color: "#c4b89a",
                             boxWidth: 9,
                             font: { size: 10, family: "Inter" },
                             padding: 8,
                         }
                     },
                     tooltip: {
-                        backgroundColor: "#10120f",
-                        titleColor: "#f5f5f5",
-                        bodyColor: "#c2cabb",
-                        borderColor: "#3b4039",
+                        backgroundColor: "#2a1f0e",
+                        titleColor: "#f9f7f3",
+                        bodyColor: "#c4b89a",
+                        borderColor: "rgba(196,184,154,0.2)",
                         borderWidth: 1,
                         padding: 8,
                         callbacks: {
@@ -91,25 +91,25 @@ class DashboardCharts {
                     {
                         label: "Industrial",
                         data: [750, 810, 890, 920, 860, 780, 820, 850, 890, 940, 880, 916],
-                        backgroundColor: "#b84226",
+                        backgroundColor: "#c14f09",
                         borderRadius: 3,
                     },
                     {
                         label: "Forest Fire",
                         data: [210, 580, 1850, 2410, 1120, 180, 45, 30, 85, 220, 310, 387],
-                        backgroundColor: "#3b4039",
+                        backgroundColor: "#6b9956",
                         borderRadius: 3,
                     },
                     {
                         label: "Quarry/Mining",
                         data: [580, 620, 710, 740, 690, 580, 520, 540, 610, 680, 590, 475],
-                        backgroundColor: "#a86e35",
+                        backgroundColor: "#c49a3c",
                         borderRadius: 3,
                     },
                     {
                         label: "Agri Burning",
                         data: [40, 65, 120, 280, 190, 50, 20, 15, 35, 160, 95, 49],
-                        backgroundColor: "#8f7b2c",
+                        backgroundColor: "#a8863e",
                         borderRadius: 3,
                     }
                 ]
@@ -121,12 +121,12 @@ class DashboardCharts {
                     x: {
                         stacked: true,
                         grid: { display: false },
-                        ticks: { color: "#3b4039", font: { size: 9.5 } }
+                        ticks: { color: "#9c9180", font: { size: 9.5 } }
                     },
                     y: {
                         stacked: true,
-                        grid: { color: "rgba(59, 64, 57, 0.15)" },
-                        ticks: { color: "#3b4039", font: { size: 9.5 } }
+                        grid: { color: "rgba(196, 184, 154, 0.08)" },
+                        ticks: { color: "#9c9180", font: { size: 9.5 } }
                     }
                 },
                 plugins: {
@@ -134,17 +134,17 @@ class DashboardCharts {
                         position: "top",
                         align: "end",
                         labels: {
-                            color: "#3b4039",
+                            color: "#c4b89a",
                             boxWidth: 8,
                             font: { size: 9 },
                             padding: 6,
                         }
                     },
                     tooltip: {
-                        backgroundColor: "#10120f",
-                        titleColor: "#f5f5f5",
-                        bodyColor: "#c2cabb",
-                        borderColor: "#3b4039",
+                        backgroundColor: "#2a1f0e",
+                        titleColor: "#f9f7f3",
+                        bodyColor: "#c4b89a",
+                        borderColor: "rgba(196,184,154,0.2)",
                         borderWidth: 1,
                         padding: 8
                     }
