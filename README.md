@@ -1,4 +1,4 @@
-# 🔥 AGNI-VISION: AI-Enabled Geospatial Thermal Anomaly & Industrial Fire Monitoring
+# ThermalIntel: AI-Enabled Geospatial Thermal Anomaly & Industrial Fire Monitoring
 
 > **Smart India Hackathon (SIH 2026)**  
 > **Problem Statement:** AI-Based Detection and Classification of Industrial Fires & Persistent Thermal Sources  
