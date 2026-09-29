@@ -460,21 +460,265 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); box-sh
 @keyframes marker-pulse { 0% { r: 6; opacity: 1; } 50% { r: 12; opacity: 0.4; } 100% { r: 6; opacity: 1; } }
 
 /* ── LIVE FEED ── */
-.btn-live-mode { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all var(--transition-fast); font-size: 12px; white-space: nowrap; }
-.btn-live-mode:hover { background: rgba(239,68,68,0.25); border-color: #ef4444; color: #fff; box-shadow: 0 0 18px rgba(239,68,68,0.45); transform: translateY(-1px); }
-.btn-live-mode.active-live { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; border-color: #f87171; box-shadow: 0 0 22px rgba(239,68,68,0.6), var(--shadow-inset); }
+.btn-live-mode { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #6ee7b7; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all var(--transition-fast); font-size: 12px; white-space: nowrap; }
+.btn-live-mode:hover { background: rgba(16,185,129,0.25); border-color: #10b981; color: #fff; box-shadow: 0 0 18px rgba(16,185,129,0.45); transform: translateY(-1px); }
+.btn-live-mode.active-live { background: linear-gradient(135deg, #059669, #10b981); color: #fff; border-color: #34d399; box-shadow: 0 0 22px rgba(16,185,129,0.6), var(--shadow-inset); }
+
+.live-pill-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(16,185,129,0.12); border: 1px solid rgba(52,211,153,0.35);
+    padding: 6px 12px; border-radius: var(--radius-full);
+    font-size: 10.5px; font-weight: 700; color: #34d399;
+    letter-spacing: 0.6px; text-transform: uppercase;
+    box-shadow: 0 0 16px rgba(16,185,129,0.18);
+}
 
 .live-pulse-dot { width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #ef4444; animation: live-blinker 1.2s ease-in-out infinite; flex-shrink: 0; }
+.live-pulse-dot.live-green { background-color: #10b981; box-shadow: 0 0 12px #34d399; }
 @keyframes live-blinker { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.75); } }
 
-.realtime-status-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 650; display: flex; align-items: center; gap: 16px; padding: 8px 20px; background: rgba(10,16,34,0.97); border: 1px solid rgba(239,68,68,0.4); box-shadow: 0 8px 32px rgba(0,0,0,0.7); border-radius: var(--radius-full); backdrop-filter: blur(20px); animation: fadeInDown 0.3s ease; }
+.live-window-wrapper { display: flex; align-items: center; }
+.live-select-pill {
+    background: rgba(15,23,42,0.85); border: 1px solid rgba(0,212,255,0.25);
+    border-radius: var(--radius-full); padding: 5px 10px; font-size: 11px;
+    color: var(--text-accent); font-weight: 600; outline: none; cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.live-select-pill:focus, .live-select-pill:hover { border-color: var(--primary); box-shadow: 0 0 12px rgba(0,212,255,0.25); }
+
+.realtime-status-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 650; display: flex; align-items: center; gap: 16px; padding: 8px 20px; background: rgba(6,12,28,0.96); border: 1px solid rgba(16,185,129,0.45); box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 24px rgba(16,185,129,0.15); border-radius: var(--radius-full); backdrop-filter: blur(20px); animation: fadeInDown 0.3s ease; }
 @keyframes fadeInDown { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 .realtime-status-banner.hidden { display: none; }
 .banner-content { display: flex; align-items: center; gap: 10px; }
-.banner-badge { font-size: 10px; font-weight: 800; color: #ff6b6b; letter-spacing: 0.6px; text-transform: uppercase; }
+.banner-badge { font-size: 10px; font-weight: 800; color: #34d399; letter-spacing: 0.6px; text-transform: uppercase; }
 #realtime-banner-msg { font-size: 11.5px; color: var(--text-primary); font-weight: 500; }
 .banner-actions { display: flex; align-items: center; gap: 8px; }
 .btn-xs { padding: 4px 12px; font-size: 11px; border-radius: var(--radius-full); }
 
 /* ── UTILITY ── */
 .hidden { display: none !important; }
+
+/* ── METEOROLOGICAL INTELLIGENCE & FIRE FEASIBILITY ── */
+.weather-intel-box {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-top: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.weather-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.w-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(8, 14, 30, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+.w-icon { font-size: 16px; }
+.w-val { display: block; font-size: 12.5px; font-weight: 700; color: #f8fafc; font-family: monospace; }
+.w-label { display: block; font-size: 9.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
+.weather-verdict-card {
+    background: rgba(8, 14, 30, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 6px;
+    padding: 9px 11px;
+}
+.verdict-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.badge-weather {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.badge-suppressed {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+.badge-danger {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+.badge-independent {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+}
+.verdict-desc {
+    font-size: 11px;
+    color: #cbd5e1;
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* ============================================================
+   OPTICAL FOOTPRINT VALIDATION (ESA WorldCover Recon Card)
+   ============================================================ */
+.label-tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    background: rgba(56,189,248,0.10);
+    border: 1px solid rgba(56,189,248,0.25);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.recon-box {
+    background: rgba(8, 14, 30, 0.72);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+.recon-loading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #38bdf8;
+    font-size: 11.5px;
+    padding: 4px 0;
+    animation: pulse-subtle 1.8s ease-in-out infinite;
+}
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 0.9; }
+    50%       { opacity: 0.55; }
+}
+.recon-result {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.recon-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.recon-sub {
+    font-size: 10px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.recon-dominant {
+    font-size: 11.5px;
+    color: #e2e8f0;
+    font-weight: 700;
+}
+
+/* Composition bars */
+.recon-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.recon-bar-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.recon-bar-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.recon-bar-name {
+    font-size: 10px;
+    color: #94a3b8;
+}
+.recon-bar-pct {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.recon-bar-track {
+    height: 5px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.recon-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Verdict card */
+.recon-verdict-card {
+    margin-top: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 9px 11px;
+    background: rgba(255,255,255,0.025);
+    transition: border-color 0.3s ease;
+}
+.recon-verdict-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.recon-verdict-badge {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+}
+.recon-pixels {
+    font-size: 9px;
+    color: #475569;
+    font-family: 'JetBrains Mono', monospace;
+}
+.recon-verdict-text {
+    font-size: 10.5px;
+    color: #cbd5e1;
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* Mixed pixel warning */
+.recon-mixed-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    background: rgba(251,191,36,0.08);
+    border: 1px solid rgba(251,191,36,0.28);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 10px;
+    color: #fbbf24;
+    line-height: 1.4;
+    margin-top: 2px;
+}
+.recon-mixed-warning i {
+    margin-top: 1px;
+    flex-shrink: 0;
+}

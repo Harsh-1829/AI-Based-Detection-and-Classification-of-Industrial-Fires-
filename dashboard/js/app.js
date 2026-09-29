@@ -25,9 +25,12 @@
         daynight: "ALL",
         isDrawerCollapsed: true,
         selectedDetection: null,
-        isRealtimeMode: false,
+        isRealtimeMode: true,
         realtimeData: null,
         realtimeDays: 5,
+        realtimeSource: "VIIRS_NOAA21_NRT",
+        autoSyncInterval: null,
+        _initialBoundsFitted: false,
     };
 
     // Color definitions
@@ -53,13 +56,21 @@
     document.addEventListener("DOMContentLoaded", async () => {
         initMap();
         initUIEventListeners();
-        window.dashboardCharts.init();
+        if (window.dashboardCharts) {
+            window.dashboardCharts.init();
+        }
 
-        // Load initial data
+        // 1. Render official Jharkhand administrative boundary
         await fetchBoundary();
-        await fetchStats();
+
+        // 2. Load all 150 persistent industrial thermal source clusters across Jharkhand
         await fetchSources();
-        await fetchDetections();
+
+        // 3. Immediately fetch & display Live Real-Time NASA FIRMS Stream!
+        await loadRealtimeData();
+
+        // 4. Start auto-synchronization background polling
+        startAutoSync();
     });
 
     /**
@@ -146,14 +157,18 @@
             if (!res.ok) return;
             const geojson = await res.json();
 
+            if (state.boundaryLayer) {
+                state.map.removeLayer(state.boundaryLayer);
+            }
+
             state.boundaryLayer = L.geoJSON(geojson, {
                 style: {
                     color: "#00f0ff",
-                    weight: 2.8,
-                    opacity: 0.95,
-                    dashArray: "8, 6",
+                    weight: 3.2,
+                    opacity: 1.0,
+                    dashArray: "10, 6",
                     fillColor: "#06b6d4",
-                    fillOpacity: 0.04,
+                    fillOpacity: 0.05,
                 },
                 onEachFeature: (feature, layer) => {
                     layer.bindTooltip(
@@ -164,7 +179,8 @@
             }).addTo(state.map);
 
             if (state.boundaryLayer.getBounds().isValid()) {
-                state.map.fitBounds(state.boundaryLayer.getBounds(), { padding: [20, 20] });
+                state.map.fitBounds(state.boundaryLayer.getBounds(), { padding: [25, 25] });
+                state._initialBoundsFitted = true;
             }
         } catch (err) {
             console.error("Failed to load Jharkhand boundary:", err);
@@ -261,6 +277,10 @@
      * Render Detections Layer with Filters
      */
     function applyFiltersAndRender() {
+        if (state.isRealtimeMode && state.realtimeData) {
+            renderRealtimeFeed(state.realtimeData);
+            return;
+        }
         if (!state.detectionsData || !state.detectionsData.features) return;
 
         state.detectionsLayer.clearLayers();
@@ -354,6 +374,7 @@
      * Render Persistent Source Clusters
      */
     function renderSourcesLayer(geojson) {
+        if (!state.sourcesLayer) return;
         state.sourcesLayer.clearLayers();
         if (!geojson || !geojson.features) return;
 
@@ -362,18 +383,19 @@
             const [lon, lat] = feat.geometry.coordinates;
 
             const ringMarker = L.circleMarker([lat, lon], {
-                radius: Math.min(12 + p.detection_count * 0.15, 22),
-                fillColor: "transparent",
+                radius: Math.min(13 + (p.detection_count || 1) * 0.12, 24),
+                fillColor: "rgba(56, 189, 248, 0.08)",
                 color: "#38bdf8",
-                weight: 1.8,
-                dashArray: "4, 4",
-                opacity: 0.85,
+                weight: 2.2,
+                dashArray: "5, 5",
+                opacity: 0.95,
+                fillOpacity: 0.2,
             });
 
-            ringMarker.bindTooltip(`Persistent Source #${p.source_cluster_id}<br/>${p.dominant_class} (${p.detection_count} detections)`, {
-                direction: "top",
-                className: "custom-leaflet-tooltip"
-            });
+            ringMarker.bindTooltip(
+                `<div style="font-family:Inter,sans-serif;padding:3px 6px;"><strong>Persistent Source #${p.source_cluster_id}</strong><br/><span style="color:#38bdf8;font-weight:600;">${p.dominant_class}</span> (${p.detection_count} detections, avg FRP: ${p.avg_frp} MW)</div>`,
+                { direction: "top", className: "custom-leaflet-tooltip" }
+            );
 
             ringMarker.on("click", () => {
                 showDetectionDetails({
@@ -391,6 +413,11 @@
 
             state.sourcesLayer.addLayer(ringMarker);
         });
+
+        const sourcesToggle = document.getElementById("toggle-sources");
+        if ((!sourcesToggle || sourcesToggle.checked) && !state.map.hasLayer(state.sourcesLayer)) {
+            state.sourcesLayer.addTo(state.map);
+        }
     }
 
     /**
@@ -441,6 +468,160 @@
 
         // Probabilities
         renderProbabilityBars("detail-prob-bars", p);
+
+        // Meteorological Intelligence & Wildfire Feasibility
+        fetchAndRenderWeather(p.latitude, p.longitude, p.predicted_class);
+
+        // Optical Footprint Validation (ESA WorldCover)
+        fetchAndRenderSatelliteRecon(p.latitude, p.longitude, p.predicted_class);
+    }
+
+    /**
+     * Fetch & Display Live Weather & Fire Feasibility
+     */
+    async function fetchAndRenderWeather(lat, lon, predictedClass) {
+        const tempEl = document.getElementById("detail-weather-temp");
+        const rhEl = document.getElementById("detail-weather-rh");
+        const rainEl = document.getElementById("detail-weather-rain");
+        const windEl = document.getElementById("detail-weather-wind");
+        const badgeEl = document.getElementById("detail-weather-badge");
+        const textEl = document.getElementById("detail-weather-text");
+
+        if (!tempEl || !lat || !lon) return;
+
+        // Loading state
+        tempEl.textContent = "...";
+        rhEl.textContent = "...";
+        rainEl.textContent = "...";
+        windEl.textContent = "...";
+        badgeEl.className = "badge-weather badge-suppressed";
+        badgeEl.textContent = "QUERYING WEATHER...";
+        textEl.textContent = "Analyzing ambient humidity and fuel moisture content...";
+
+        try {
+            const res = await fetch(`/api/weather/evaluate?latitude=${lat}&longitude=${lon}&predicted_class=${encodeURIComponent(predictedClass || '')}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const w = await res.json();
+
+            tempEl.textContent = `${w.temperature_c.toFixed(1)}°C`;
+            rhEl.textContent = `${w.relative_humidity_pct}%`;
+            rainEl.textContent = `${w.precipitation_mm.toFixed(1)} mm`;
+            windEl.textContent = `${w.wind_speed_kmh.toFixed(1)} km/h`;
+
+            if (w.is_suppressed) {
+                badgeEl.className = "badge-weather badge-suppressed";
+                badgeEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${w.status_badge}`;
+            } else if (w.risk_level && (w.risk_level.includes("CRITICAL") || w.risk_level.includes("HIGH"))) {
+                badgeEl.className = "badge-weather badge-danger";
+                badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${w.status_badge}`;
+            } else {
+                badgeEl.className = "badge-weather badge-independent";
+                badgeEl.innerHTML = `<i class="fa-solid fa-industry"></i> ${w.status_badge}`;
+            }
+
+            textEl.innerHTML = `<strong>${w.reason}</strong><br/><span style="color:#cbd5e1; font-size:10.5px; margin-top:3px; display:inline-block;">${w.verdict_text}</span>`;
+        } catch (err) {
+            console.warn("Weather evaluation fetch failed:", err);
+            badgeEl.className = "badge-weather badge-suppressed";
+            badgeEl.textContent = "WEATHER UNAVAILABLE";
+            textEl.textContent = "Could not retrieve meteorological telemetry.";
+        }
+    }
+
+    /**
+     * Fetch & Display ESA WorldCover Optical Footprint Validation
+     */
+    async function fetchAndRenderSatelliteRecon(lat, lon, predictedClass) {
+        const loadingEl = document.getElementById("recon-loading");
+        const resultEl  = document.getElementById("recon-result");
+        const barsEl    = document.getElementById("recon-bars");
+        const dominantEl = document.getElementById("recon-dominant");
+        const badgeEl   = document.getElementById("recon-verdict-badge");
+        const textEl    = document.getElementById("recon-verdict-text");
+        const pixelsEl  = document.getElementById("recon-pixels");
+        const mixedEl   = document.getElementById("recon-mixed-warning");
+        const mixedTextEl = document.getElementById("recon-mixed-text");
+        const cardEl    = document.getElementById("recon-verdict-card");
+
+        if (!loadingEl || !lat || !lon) return;
+
+        // Reset to loading state
+        loadingEl.classList.remove("hidden");
+        resultEl.classList.add("hidden");
+        mixedEl.classList.add("hidden");
+
+        // Colour palette for WorldCover classes
+        const RECON_COLORS = {
+            "Tree cover":             "#22c55e",
+            "Shrubland":              "#84cc16",
+            "Grassland":              "#a3e635",
+            "Cropland":               "#eab308",
+            "Built-up":               "#ef4444",
+            "Bare/sparse vegetation": "#f97316",
+            "Permanent water bodies": "#38bdf8",
+            "Herbaceous wetland":     "#06b6d4",
+            "Mangroves":              "#14b8a6",
+            "Moss and lichen":        "#a78bfa",
+        };
+
+        try {
+            const url = `/api/landcover/validate?latitude=${lat}&longitude=${lon}&predicted_class=${encodeURIComponent(predictedClass || '')}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const d = await res.json();
+
+            // Dominant cover
+            dominantEl.textContent = d.dominant_class || "Unknown";
+
+            // Composition bars — sorted descending
+            barsEl.innerHTML = "";
+            const sortedCounts = Object.entries(d.pixel_counts || {})
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6);
+
+            sortedCounts.forEach(([name, pct]) => {
+                const color = RECON_COLORS[name] || "#94a3b8";
+                const row = document.createElement("div");
+                row.className = "recon-bar-row";
+                row.innerHTML = `
+                    <div class="recon-bar-label-row">
+                        <span class="recon-bar-name">${name}</span>
+                        <strong class="recon-bar-pct" style="color:${color};">${pct}%</strong>
+                    </div>
+                    <div class="recon-bar-track">
+                        <div class="recon-bar-fill" style="width:${pct}%; background:${color};"></div>
+                    </div>`;
+                barsEl.appendChild(row);
+            });
+
+            // Verdict badge
+            const vColor = d.verdict_color || "#94a3b8";
+            badgeEl.textContent = (d.verdict || "UNVERIFIED").replace(/_/g, " ");
+            badgeEl.style.background = vColor + "22";
+            badgeEl.style.color = vColor;
+            badgeEl.style.borderColor = vColor + "55";
+            textEl.textContent = d.verdict_text || "";
+            cardEl.style.borderColor = vColor + "44";
+
+            // Pixels sampled
+            pixelsEl.textContent = d.total_pixels_sampled
+                ? `${d.total_pixels_sampled.toLocaleString()} px sampled (ESA WorldCover 10m)`
+                : "";
+
+            // Mixed pixel warning
+            if (d.mixed_pixel_warning) {
+                mixedTextEl.textContent = d.mixed_pixel_warning;
+                mixedEl.classList.remove("hidden");
+            }
+
+            // Show result
+            loadingEl.classList.add("hidden");
+            resultEl.classList.remove("hidden");
+
+        } catch (err) {
+            console.warn("Satellite recon fetch failed:", err);
+            loadingEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>Footprint scan unavailable</span>`;
+        }
     }
 
     /**
@@ -489,77 +670,72 @@
     }
 
     /**
-     * Toggle Real-Time NASA FIRMS View
+     * Fetch & Display Live NASA FIRMS Real-Time Data
      */
-    async function toggleRealtimeView(forceState) {
-        state.isRealtimeMode = forceState !== undefined ? forceState : !state.isRealtimeMode;
-        const btn = document.getElementById("btn-realtime-toggle");
-        const label = document.getElementById("realtime-btn-label");
+    async function loadRealtimeData(forceRefresh = false) {
+        state.isRealtimeMode = true;
         const banner = document.getElementById("realtime-status-banner");
         const bannerMsg = document.getElementById("realtime-banner-msg");
+        const days = state.realtimeDays || 5;
+        const source = state.realtimeSource || "VIIRS_NOAA21_NRT";
 
-        if (state.isRealtimeMode) {
-            btn.classList.add("active-live");
-            label.textContent = "🌐 Full Baseline";
-            banner.classList.remove("hidden");
-            bannerMsg.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Fetching live anomalies from NASA FIRMS VIIRS NOAA-21 (URT+NRT) (last ${state.realtimeDays} days)...`;
-            showToast(`Connecting to real-time NASA FIRMS VIIRS NOAA-21 feed (${state.realtimeDays}d)...`, "info");
+        if (banner) banner.classList.remove("hidden");
+        if (bannerMsg) {
+            bannerMsg.innerHTML = `<i class="fa-solid fa-satellite fa-spin"></i> Synchronizing live anomalies from NASA FIRMS VIIRS NOAA-21 (last ${days} days)...`;
+        }
+        showToast(`Connecting to real-time NASA FIRMS stream (${days}d window)...`, "info");
 
-            try {
-                const res = await fetch(`/api/detections/realtime?days=${state.realtimeDays}&source=VIIRS_NOAA21_NRT`);
-                const data = await res.json();
-                state.realtimeData = data;
+        // Show spinner on total KPI
+        const totalCountEl = document.getElementById("val-total-count");
+        if (totalCountEl) totalCountEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
 
-                const count = data.metadata ? data.metadata.count : (data.features ? data.features.length : 0);
-                if (count > 0) {
-                    bannerMsg.textContent = `Displaying ${count} live thermal anomalies detected in the last ${state.realtimeDays} days by VIIRS NOAA-21 (URT+NRT).`;
-                    showToast(`NASA FIRMS NOAA-21: ${count} live thermal anomalies found!`, "success");
-                } else {
-                    bannerMsg.textContent = `NASA FIRMS VIIRS NOAA-21: 0 active thermal anomalies in Jharkhand in the past ${state.realtimeDays} days.`;
-                    showToast(`NASA FIRMS NOAA-21: 0 active anomalies in past ${state.realtimeDays} days.`, "info");
-                }
+        try {
+            const url = `/api/detections/realtime?days=${days}&source=${source}&force_refresh=${forceRefresh}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            state.realtimeData = data;
+            state.detectionsData = data;
 
-                // Render real-time feed on map
-                renderRealtimeFeed(data);
-
-            } catch (err) {
-                console.error("Live feed fetch error:", err);
-                bannerMsg.textContent = "Error fetching live feed from NASA FIRMS API.";
-                showToast("Failed to fetch live NASA FIRMS feed", "error");
-            }
-        } else {
-            // Return to Full Baseline
-            btn.classList.remove("active-live");
-            label.textContent = "🔴 Live FIRMS Feed";
-            banner.classList.add("hidden");
-            showToast("Switched back to Full Baseline (31k anomalies)", "info");
-
-            // Restore baseline stats
-            if (state.statsData) {
-                document.getElementById("val-total-count").textContent = (state.statsData.total_detections || 0).toLocaleString();
-                document.getElementById("val-industrial-count").textContent = (state.statsData.by_class?.Industrial || 0).toLocaleString();
-                document.getElementById("val-forest-count").textContent = (state.statsData.by_class?.["Forest fire"] || 0).toLocaleString();
-                document.getElementById("val-quarry-count").textContent = (state.statsData.by_class?.["Quarry/Mining"] || 0).toLocaleString();
-                document.getElementById("val-agri-count").textContent = (state.statsData.by_class?.["Agricultural burning"] || 0).toLocaleString();
-                document.getElementById("val-max-frp").textContent = `${state.statsData.max_frp || 0} MW`;
+            const count = data.metadata ? data.metadata.count : (data.features ? data.features.length : 0);
+            if (bannerMsg) {
+                bannerMsg.textContent = count > 0
+                    ? `Displaying ${count} live thermal anomalies detected in the last ${days} days across Jharkhand by VIIRS NOAA-21.`
+                    : `NASA FIRMS: 0 active thermal anomalies detected in Jharkhand in past ${days} day(s).`;
             }
 
-            applyFiltersAndRender();
-            if (state.sourcesLayer) state.sourcesLayer.addTo(state.map);
+            renderRealtimeFeed(data);
+            showToast(`NASA FIRMS: ${count} real-time anomalies loaded!`, "success");
+        } catch (err) {
+            console.error("Failed to load real-time FIRMS data:", err);
+            if (bannerMsg) bannerMsg.textContent = "Error connecting to NASA FIRMS API.";
+            showToast("Failed to fetch live NASA FIRMS feed", "error");
         }
     }
 
     /**
-     * Render Real-Time Feed on Map
+     * Render Real-Time Feed on Leaflet Map & Synchronize All UI Elements
      */
     function renderRealtimeFeed(geojson) {
+        if (!geojson) return;
+
+        // Clear ONLY the detection markers — NEVER clear the persistent sources layer!
         state.detectionsLayer.clearLayers();
+
+        // Ensure persistent sources are on the map if they were loaded
+        if (state.sourcesLayer && state.sourcesLayer.getLayers().length === 0 && state.sourcesData) {
+            renderSourcesLayer(state.sourcesData);
+        } else if (state.sourcesLayer && state.sourcesLayer.getLayers().length === 0 && !state.sourcesData) {
+            fetchSources();
+        }
+
         if (state.heatLayer) {
             state.map.removeLayer(state.heatLayer);
             state.heatLayer = null;
         }
 
         const features = geojson.features || [];
+        const meta = geojson.metadata || {};
         const classCounts = {
             "Industrial": 0,
             "Forest fire": 0,
@@ -567,103 +743,239 @@
             "Agricultural burning": 0,
             "Vegetation fire (open/scrub)": 0,
         };
+
         let maxFrp = 0;
-        const latLngs = [];
+        let renderedCount = 0;
+        const heatPoints = [];
 
+        // Count totals from all features
         features.forEach((feat) => {
-            const p = feat.properties;
-            const [lon, lat] = feat.geometry.coordinates;
-            latLngs.push([lat, lon]);
-
+            const p = feat.properties || {};
             if (p.predicted_class && classCounts[p.predicted_class] !== undefined) {
                 classCounts[p.predicted_class]++;
             }
             if (p.frp && p.frp > maxFrp) {
                 maxFrp = p.frp;
             }
+        });
+
+        // Filter and render live detection markers
+        features.forEach((feat) => {
+            const p = feat.properties || {};
+            const coords = feat.geometry ? feat.geometry.coordinates : [0, 0];
+            const [lon, lat] = coords;
+
+            // Filter: Class
+            if (!state.activeClasses.has(p.predicted_class)) return;
+
+            // Filter: Confidence
+            if (p.prediction_confidence && p.prediction_confidence < state.minConfidence) return;
+
+            // Filter: FRP
+            if (p.frp && p.frp < state.minFRP) return;
+
+            // Filter: Day / Night
+            if (state.daynight !== "ALL" && p.daynight && p.daynight !== state.daynight) return;
+
+            heatPoints.push([lat, lon, Math.min((p.frp || 2) / 10, 1.0)]);
 
             const color = CLASS_COLORS[p.predicted_class] || "#ef4444";
+            const isHighFrp = p.frp && p.frp >= 15;
+            const radius = isHighFrp ? 8.5 : (p.predicted_class === "Industrial" ? 7.5 : 6);
+
             const marker = L.circleMarker([lat, lon], {
-                radius: 8,
+                radius: radius,
                 fillColor: color,
                 color: "#ffffff",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.85,
+                weight: 1.8,
+                opacity: 1.0,
+                fillOpacity: 0.9,
             });
 
+            const confPct = p.prediction_confidence ? (p.prediction_confidence * 100).toFixed(1) : "95.0";
+            const dateStr = p.acq_date ? String(p.acq_date).split(" ")[0] : "Today";
+            const timeStr = p.acq_time ? ` (${p.acq_time} UTC)` : "";
+
             const popupHtml = `
-                <div style="min-width: 210px;">
+                <div style="min-width: 220px; font-family: Inter, sans-serif;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                        <span style="background:${color}; color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase;">
+                        <span style="background:${color}; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; text-transform:uppercase;">
                             ${p.predicted_class}
                         </span>
-                        <span style="background:rgba(239,68,68,0.2); color:#fca5a5; font-size:9px; font-weight:700; padding:1px 5px; border-radius:3px;">
-                            LIVE URT
+                        <span style="background:rgba(16,185,129,0.2); color:#34d399; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; border:1px solid rgba(52,211,153,0.35);">
+                            🟢 LIVE SATELLITE
                         </span>
                     </div>
                     <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
                         <strong>Location:</strong> ${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E
                     </div>
                     <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
-                        <strong>FRP:</strong> <span style="color:#f87171; font-weight:700;">${p.frp || 'N/A'} MW</span> | 
-                        <strong>TI4:</strong> ${p.bright_ti4 || 'N/A'} K
+                        <strong>FRP:</strong> <span style="color:#f87171; font-weight:700;">${p.frp ? p.frp.toFixed(1) : 'N/A'} MW</span> | 
+                        <strong>Brightness:</strong> ${p.bright_ti4 ? p.bright_ti4.toFixed(1) : 'N/A'} K
                     </div>
                     <div style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">
-                        <strong>Confidence:</strong> ${(p.prediction_confidence * 100).toFixed(1)}%
+                        <strong>AI Confidence:</strong> <span style="color:#4ade80; font-weight:700;">${confPct}%</span>
                     </div>
-                    <div style="font-size:10px; color:#94a3b8; margin-top:6px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
-                        ${p.acq_date || 'Today'} ${p.acq_time ? '(' + p.acq_time + ' UTC)' : ''} • Satellite: VIIRS NOAA-21 (URT+NRT)
+                    <div style="font-size:10.5px; color:#94a3b8; margin-top:6px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
+                        📅 ${dateStr}${timeStr} • VIIRS NOAA-21 (${p.daynight === 'D' ? '☀️ Day' : '🌙 Night'})
                     </div>
                 </div>
             `;
 
             marker.bindPopup(popupHtml, { closeButton: true });
+            marker.bindTooltip(`<strong>${p.predicted_class}</strong> • FRP ${p.frp ? p.frp.toFixed(1) : 'N/A'} MW (Live)`, {
+                direction: "top",
+                className: "custom-leaflet-tooltip"
+            });
+
             marker.on("click", () => {
                 showDetectionDetails({ ...p, latitude: lat, longitude: lon });
             });
 
             state.detectionsLayer.addLayer(marker);
+            renderedCount++;
         });
 
-        // Update KPI Ticker with Real-Time Values
-        document.getElementById("val-total-count").textContent = features.length.toLocaleString();
-        document.getElementById("val-industrial-count").textContent = classCounts["Industrial"].toLocaleString();
-        document.getElementById("val-forest-count").textContent = classCounts["Forest fire"].toLocaleString();
-        document.getElementById("val-quarry-count").textContent = classCounts["Quarry/Mining"].toLocaleString();
-        document.getElementById("val-agri-count").textContent = classCounts["Agricultural burning"].toLocaleString();
+        // FRP Heatmap
+        const heatmapCheckbox = document.getElementById("toggle-heatmap");
+        if (heatmapCheckbox && heatmapCheckbox.checked && heatPoints.length > 0 && typeof L.heatLayer === "function") {
+            state.heatLayer = L.heatLayer(heatPoints, {
+                radius: 20,
+                blur: 15,
+                maxZoom: 14,
+                gradient: { 0.2: "#3b82f6", 0.5: "#eab308", 0.8: "#f97316", 1.0: "#ef4444" },
+            }).addTo(state.map);
+        }
+
+        // Update Top KPI Counters
+        const totalCountEl = document.getElementById("val-total-count");
+        if (totalCountEl) totalCountEl.textContent = features.length.toLocaleString();
+        document.getElementById("val-industrial-count").textContent = (classCounts["Industrial"] || 0).toLocaleString();
+        document.getElementById("val-forest-count").textContent = (classCounts["Forest fire"] || 0).toLocaleString();
+        document.getElementById("val-quarry-count").textContent = (classCounts["Quarry/Mining"] || 0).toLocaleString();
+        document.getElementById("val-agri-count").textContent = (classCounts["Agricultural burning"] || 0).toLocaleString();
         document.getElementById("val-max-frp").textContent = `${maxFrp.toFixed(1)} MW`;
 
-        document.getElementById("rendered-features-count").textContent = `${features.length} real-time items rendered`;
+        // Update Sidebar Layer Counts
+        document.getElementById("count-industrial").textContent = (classCounts["Industrial"] || 0).toLocaleString();
+        document.getElementById("count-forest").textContent = (classCounts["Forest fire"] || 0).toLocaleString();
+        document.getElementById("count-quarry").textContent = (classCounts["Quarry/Mining"] || 0).toLocaleString();
+        document.getElementById("count-agri").textContent = (classCounts["Agricultural burning"] || 0).toLocaleString();
+        document.getElementById("count-vegetation").textContent = (classCounts["Vegetation fire (open/scrub)"] || 0).toLocaleString();
 
-        // Fit map bounds if points present
-        if (latLngs.length > 0) {
-            state.map.fitBounds(L.latLngBounds(latLngs), { padding: [50, 50], maxZoom: 11 });
+        // Update Pill & Item counts
+        const pill = document.getElementById("stats-summary-pill");
+        if (pill) pill.textContent = `🟢 NASA FIRMS Live Feed • ${features.length} Live Anomalies`;
+
+        const renderedEl = document.getElementById("rendered-features-count");
+        if (renderedEl) renderedEl.textContent = `${renderedCount.toLocaleString()} live items rendered`;
+
+        // Update Analytics Charts
+        if (window.dashboardCharts) {
+            window.dashboardCharts.updateFromStats({
+                by_class: classCounts,
+                frp_by_class: meta.frp_by_class || {},
+            });
+            window.dashboardCharts.updateTimelineFromData(features);
         }
+
+        // Keep map centered on Jharkhand boundary
+        if (!state._initialBoundsFitted && state.boundaryLayer && state.boundaryLayer.getBounds().isValid()) {
+            state.map.fitBounds(state.boundaryLayer.getBounds(), { padding: [25, 25] });
+            state._initialBoundsFitted = true;
+        }
+    }
+
+    /**
+     * Toggle Between Live Feed and Historical Archive
+     */
+    async function toggleMode() {
+        state.isRealtimeMode = !state.isRealtimeMode;
+        const banner = document.getElementById("realtime-status-banner");
+        const toggleBtnLabel = document.getElementById("label-mode-toggle");
+        const indicator = document.getElementById("live-indicator-pill");
+
+        if (state.isRealtimeMode) {
+            if (toggleBtnLabel) toggleBtnLabel.textContent = "Archive Data";
+            if (indicator) indicator.style.display = "inline-flex";
+            if (banner) banner.classList.remove("hidden");
+            showToast("Switched to Live Real-Time Satellite Feed", "info");
+            await loadRealtimeData(false);
+        } else {
+            if (toggleBtnLabel) toggleBtnLabel.textContent = "🟢 Live Stream";
+            if (indicator) indicator.style.display = "none";
+            if (banner) banner.classList.add("hidden");
+            showToast("Switched to Historical 2021-2022 Validation Archive", "info");
+
+            await fetchStats();
+            await fetchSources();
+            await fetchDetections();
+        }
+    }
+
+    /**
+     * Setup Automatic Polling Synchronization
+     */
+    function startAutoSync() {
+        if (state.autoSyncInterval) clearInterval(state.autoSyncInterval);
+        state.autoSyncInterval = setInterval(() => {
+            if (state.isRealtimeMode) {
+                console.log("Auto-syncing real-time satellite anomalies...");
+                loadRealtimeData(false);
+            }
+        }, 90000); // 90 seconds
     }
 
     /**
      * UI Event Listeners
      */
     function initUIEventListeners() {
-        // Real-Time Live Feed Toggle Button
-        const realtimeBtn = document.getElementById("btn-realtime-toggle");
-        if (realtimeBtn) {
-            realtimeBtn.addEventListener("click", () => toggleRealtimeView());
+        // Live Observation Window Dropdown
+        const windowSelect = document.getElementById("select-live-window");
+        if (windowSelect) {
+            if (!windowSelect.value || windowSelect.value === "1") {
+                windowSelect.value = "5";
+            }
+            state.realtimeDays = parseInt(windowSelect.value) || 5;
+            const label = document.getElementById("label-realtime-days");
+            if (label) label.textContent = `${state.realtimeDays} Day${state.realtimeDays > 1 ? 's' : ''} Window`;
+
+            windowSelect.addEventListener("change", (e) => {
+                state.realtimeDays = parseInt(e.target.value) || 5;
+                if (label) label.textContent = `${state.realtimeDays} Day${state.realtimeDays > 1 ? 's' : ''} Window`;
+                if (state.isRealtimeMode) {
+                    loadRealtimeData(false);
+                }
+            });
         }
 
-        const exitRealtimeBtn = document.getElementById("btn-exit-realtime");
-        if (exitRealtimeBtn) {
-            exitRealtimeBtn.addEventListener("click", () => toggleRealtimeView(false));
+        // Sync Live Buttons
+        const syncLiveBtn = document.getElementById("btn-sync-live");
+        if (syncLiveBtn) {
+            syncLiveBtn.addEventListener("click", () => loadRealtimeData(true));
         }
 
+        const bannerSyncBtn = document.getElementById("btn-banner-sync");
+        if (bannerSyncBtn) {
+            bannerSyncBtn.addEventListener("click", () => loadRealtimeData(true));
+        }
+
+        // Mode Toggle Button (Live vs Archive)
+        const modeToggleBtn = document.getElementById("btn-mode-toggle");
+        if (modeToggleBtn) {
+            modeToggleBtn.addEventListener("click", () => toggleMode());
+        }
+
+        // Realtime Days Banner Button
         const realtimeDaysBtn = document.getElementById("btn-realtime-days-toggle");
         if (realtimeDaysBtn) {
             realtimeDaysBtn.addEventListener("click", () => {
-                state.realtimeDays = state.realtimeDays === 1 ? 5 : (state.realtimeDays === 5 ? 2 : 1);
+                const nextDays = state.realtimeDays === 1 ? 2 : (state.realtimeDays === 2 ? 5 : (state.realtimeDays === 5 ? 7 : 1));
+                state.realtimeDays = nextDays;
+                if (windowSelect) windowSelect.value = String(nextDays);
                 document.getElementById("label-realtime-days").textContent = `${state.realtimeDays} Day${state.realtimeDays > 1 ? 's' : ''} Window`;
                 if (state.isRealtimeMode) {
-                    toggleRealtimeView(true);
+                    loadRealtimeData(false);
                 }
             });
         }
@@ -685,20 +997,24 @@
         // Confidence Slider
         const confSlider = document.getElementById("slider-confidence");
         const confBadge = document.getElementById("conf-val-badge");
-        confSlider.addEventListener("input", (e) => {
-            state.minConfidence = parseInt(e.target.value) / 100;
-            confBadge.textContent = `≥ ${e.target.value}%`;
-            applyFiltersAndRender();
-        });
+        if (confSlider && confBadge) {
+            confSlider.addEventListener("input", (e) => {
+                state.minConfidence = parseInt(e.target.value) / 100;
+                confBadge.textContent = `≥ ${e.target.value}%`;
+                applyFiltersAndRender();
+            });
+        }
 
         // FRP Slider
         const frpSlider = document.getElementById("slider-frp");
         const frpBadge = document.getElementById("frp-val-badge");
-        frpSlider.addEventListener("input", (e) => {
-            state.minFRP = parseFloat(e.target.value);
-            frpBadge.textContent = `≥ ${e.target.value} MW`;
-            applyFiltersAndRender();
-        });
+        if (frpSlider && frpBadge) {
+            frpSlider.addEventListener("input", (e) => {
+                state.minFRP = parseFloat(e.target.value);
+                frpBadge.textContent = `≥ ${e.target.value} MW`;
+                applyFiltersAndRender();
+            });
+        }
 
         // Day / Night Toggle
         document.querySelectorAll("#btn-group-daynight .btn-toggle").forEach((btn) => {
@@ -712,10 +1028,12 @@
 
         // District Jump
         const districtSelect = document.getElementById("select-district-jump");
-        districtSelect.addEventListener("change", (e) => {
-            const dest = DISTRICT_BOUNDS[e.target.value] || DISTRICT_BOUNDS.ALL;
-            state.map.flyTo(dest.center, dest.zoom, { duration: 1.5 });
-        });
+        if (districtSelect) {
+            districtSelect.addEventListener("change", (e) => {
+                const dest = DISTRICT_BOUNDS[e.target.value] || DISTRICT_BOUNDS.ALL;
+                state.map.flyTo(dest.center, dest.zoom, { duration: 1.5 });
+            });
+        }
 
         // Basemap Cards
         document.querySelectorAll(".basemap-card").forEach((card) => {
@@ -748,48 +1066,58 @@
         }
 
         // Heatmap Toggle
-        document.getElementById("toggle-heatmap").addEventListener("change", () => {
-            applyFiltersAndRender();
-        });
+        const heatmapToggle = document.getElementById("toggle-heatmap");
+        if (heatmapToggle) {
+            heatmapToggle.addEventListener("change", () => {
+                applyFiltersAndRender();
+            });
+        }
 
         // Persistent Sources Toggle
-        document.getElementById("toggle-sources").addEventListener("change", (e) => {
-            if (e.target.checked) {
-                state.sourcesLayer.addTo(state.map);
-            } else {
-                state.map.removeLayer(state.sourcesLayer);
-            }
-        });
+        const sourcesToggle = document.getElementById("toggle-sources");
+        if (sourcesToggle) {
+            sourcesToggle.addEventListener("change", (e) => {
+                if (!state.sourcesLayer) return;
+                if (e.target.checked) {
+                    state.sourcesLayer.addTo(state.map);
+                } else {
+                    state.map.removeLayer(state.sourcesLayer);
+                }
+            });
+        }
 
         // OSM Overlay Toggle
-        document.getElementById("toggle-osm-overlay").addEventListener("change", async (e) => {
-            if (e.target.checked) {
-                if (state.osmLayer.getLayers().length === 0) {
-                    showToast("Loading OSM infrastructure outlines...", "info");
-                    try {
-                        const res = await fetch("/api/osm/features?limit=1500");
-                        const data = await res.json();
-                        L.geoJSON(data, {
-                            style: {
-                                color: "#38bdf8",
-                                weight: 1.5,
-                                fillOpacity: 0.15,
-                                fillColor: "#0284c7",
-                            },
-                            onEachFeature: (feature, layer) => {
-                                const p = feature.properties || {};
-                                layer.bindTooltip(`${p.name || 'Industrial Facility'} (${p.landuse || p.natural || 'site'})`);
-                            }
-                        }).addTo(state.osmLayer);
-                    } catch (err) {
-                        showToast("Failed to load OSM overlay", "error");
+        const osmToggle = document.getElementById("toggle-osm-overlay");
+        if (osmToggle) {
+            osmToggle.addEventListener("change", async (e) => {
+                if (e.target.checked) {
+                    if (state.osmLayer.getLayers().length === 0) {
+                        showToast("Loading OSM infrastructure outlines...", "info");
+                        try {
+                            const res = await fetch("/api/osm/features?limit=1500");
+                            const data = await res.json();
+                            L.geoJSON(data, {
+                                style: {
+                                    color: "#38bdf8",
+                                    weight: 1.5,
+                                    fillOpacity: 0.15,
+                                    fillColor: "#0284c7",
+                                },
+                                onEachFeature: (feature, layer) => {
+                                    const p = feature.properties || {};
+                                    layer.bindTooltip(`${p.name || 'Industrial Facility'} (${p.landuse || p.natural || 'site'})`);
+                                }
+                            }).addTo(state.osmLayer);
+                        } catch (err) {
+                            showToast("Failed to load OSM overlay", "error");
+                        }
                     }
+                    state.osmLayer.addTo(state.map);
+                } else {
+                    state.map.removeLayer(state.osmLayer);
                 }
-                state.osmLayer.addTo(state.map);
-            } else {
-                state.map.removeLayer(state.osmLayer);
-            }
-        });
+            });
+        }
 
         // Reset Filters
         document.getElementById("btn-reset-filters").addEventListener("click", () => {
@@ -817,59 +1145,70 @@
             showToast("Filters reset to default", "info");
         });
 
-        // Real-time FIRMS Fetch Button
-        document.getElementById("btn-fetch-firms").addEventListener("click", async () => {
-            const btn = document.getElementById("btn-fetch-firms");
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Ingesting...`;
-            btn.disabled = true;
+        // Optional manual ingest button (if present)
+        const fetchBtn = document.getElementById("btn-fetch-firms");
+        if (fetchBtn) {
+            fetchBtn.addEventListener("click", async () => {
+                fetchBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Ingesting...`;
+                fetchBtn.disabled = true;
 
-            try {
-                const res = await fetch("/api/fetch-firms?days=1&source=VIIRS_NOAA21_NRT", { method: "POST" });
-                const result = await res.json();
+                try {
+                    const res = await fetch("/api/fetch-firms?days=1&source=VIIRS_NOAA21_NRT", { method: "POST" });
+                    const result = await res.json();
 
-                if (result.new_detections_count > 0) {
-                    showToast(`Ingested ${result.new_detections_count} real-time VIIRS NOAA-21 anomalies!`, "success");
-                    await fetchStats();
-                    await fetchDetections();
-                } else {
-                    showToast(result.message || "FIRMS queried: 0 active anomalies in past 24h", "info");
+                    if (result.new_detections_count > 0) {
+                        showToast(`Ingested ${result.new_detections_count} real-time VIIRS NOAA-21 anomalies!`, "success");
+                        await loadRealtimeData(true);
+                    } else {
+                        showToast(result.message || "FIRMS queried: 0 active anomalies in past 24h", "info");
+                    }
+                } catch (err) {
+                    showToast("Failed to fetch real-time FIRMS data", "error");
+                } finally {
+                    fetchBtn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> Sync NASA FIRMS`;
+                    fetchBtn.disabled = false;
                 }
-            } catch (err) {
-                showToast("Failed to fetch real-time FIRMS data", "error");
-            } finally {
-                btn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> Sync NASA FIRMS`;
-                btn.disabled = false;
-            }
-        });
+            });
+        }
 
         // Toggle Analytics Drawer
         const drawer = document.getElementById("analytics-drawer");
         const toggleDrawer = () => {
+            if (!drawer) return;
             state.isDrawerCollapsed = !state.isDrawerCollapsed;
+            const collapseBtn = document.getElementById("btn-drawer-collapse");
             if (state.isDrawerCollapsed) {
                 drawer.classList.add("collapsed");
-                document.getElementById("btn-drawer-collapse").innerHTML = `<i class="fa-solid fa-chevron-up"></i>`;
+                if (collapseBtn) collapseBtn.innerHTML = `<i class="fa-solid fa-chevron-up"></i>`;
             } else {
                 drawer.classList.remove("collapsed");
-                document.getElementById("btn-drawer-collapse").innerHTML = `<i class="fa-solid fa-chevron-down"></i>`;
+                if (collapseBtn) collapseBtn.innerHTML = `<i class="fa-solid fa-chevron-down"></i>`;
             }
         };
 
-        document.getElementById("drawer-toggle-bar").addEventListener("click", toggleDrawer);
-        document.getElementById("btn-toggle-analytics").addEventListener("click", toggleDrawer);
+        const drawerBar = document.getElementById("drawer-toggle-bar");
+        if (drawerBar) drawerBar.addEventListener("click", toggleDrawer);
+        const toggleAnalyticsBtn = document.getElementById("btn-toggle-analytics");
+        if (toggleAnalyticsBtn) toggleAnalyticsBtn.addEventListener("click", toggleDrawer);
 
         // Toggle Inspector Panel
         const inspector = document.getElementById("inspector-panel");
-        document.getElementById("btn-toggle-inspector").addEventListener("click", () => {
-            inspector.classList.toggle("hidden");
-            if (!inspector.classList.contains("hidden")) {
-                switchInspectorTab("tab-simulator");
-            }
-        });
+        const toggleInspectorBtn = document.getElementById("btn-toggle-inspector");
+        if (toggleInspectorBtn && inspector) {
+            toggleInspectorBtn.addEventListener("click", () => {
+                inspector.classList.toggle("hidden");
+                if (!inspector.classList.contains("hidden")) {
+                    switchInspectorTab("tab-simulator");
+                }
+            });
+        }
 
-        document.getElementById("btn-close-inspector").addEventListener("click", () => {
-            inspector.classList.add("hidden");
-        });
+        const closeInspectorBtn = document.getElementById("btn-close-inspector");
+        if (closeInspectorBtn && inspector) {
+            closeInspectorBtn.addEventListener("click", () => {
+                inspector.classList.add("hidden");
+            });
+        }
 
         // Inspector Tabs
         document.querySelectorAll(".inspector-tabs .tab-btn").forEach((btn) => {
@@ -879,7 +1218,9 @@
         });
 
         // Simulator Form Submit
-        document.getElementById("form-simulator").addEventListener("submit", async (e) => {
+        const simForm = document.getElementById("form-simulator");
+        if (simForm) {
+            simForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById("btn-run-sim");
             submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Inferencing...`;
@@ -939,6 +1280,7 @@
             }
         });
     }
+}
 
     /**
      * Switch Tab inside Inspector

@@ -197,6 +197,65 @@ class DashboardCharts {
             this.classChart.data.datasets[0].data = data;
             this.classChart.update();
         }
+
+        if (this.frpChart && stats.frp_by_class) {
+            const frpLabels = Object.keys(stats.frp_by_class);
+            const frpVals = Object.values(stats.frp_by_class);
+            if (frpLabels.length > 0) {
+                this.frpChart.data.labels = frpLabels;
+                this.frpChart.data.datasets[0].data = frpVals;
+                this.frpChart.data.datasets[0].backgroundColor = frpLabels.map(l => this.colors[l] || "#06b6d4");
+                this.frpChart.update();
+            }
+        }
+    }
+
+    updateTimelineFromData(features) {
+        if (!this.timelineChart || !features || features.length === 0) return;
+
+        const dateMap = {};
+        features.forEach(f => {
+            const p = f.properties || {};
+            const rawDate = p.acq_date ? String(p.acq_date).split(" ")[0] : "Recent";
+            if (!dateMap[rawDate]) {
+                dateMap[rawDate] = { "Industrial": 0, "Forest fire": 0, "Quarry/Mining": 0, "Agricultural burning": 0, "Vegetation fire (open/scrub)": 0 };
+            }
+            if (p.predicted_class && dateMap[rawDate][p.predicted_class] !== undefined) {
+                dateMap[rawDate][p.predicted_class]++;
+            }
+        });
+
+        const sortedDates = Object.keys(dateMap).sort();
+        if (sortedDates.length === 0) return;
+
+        this.timelineChart.data.labels = sortedDates;
+        this.timelineChart.data.datasets = [
+            {
+                label: "Industrial",
+                data: sortedDates.map(d => dateMap[d]["Industrial"]),
+                backgroundColor: "rgba(239, 68, 68, 0.85)",
+                borderRadius: 4,
+            },
+            {
+                label: "Forest Fire",
+                data: sortedDates.map(d => dateMap[d]["Forest fire"]),
+                backgroundColor: "rgba(34, 197, 94, 0.85)",
+                borderRadius: 4,
+            },
+            {
+                label: "Mining/Quarry",
+                data: sortedDates.map(d => dateMap[d]["Quarry/Mining"]),
+                backgroundColor: "rgba(249, 115, 22, 0.85)",
+                borderRadius: 4,
+            },
+            {
+                label: "Agri Burning",
+                data: sortedDates.map(d => dateMap[d]["Agricultural burning"]),
+                backgroundColor: "rgba(234, 179, 8, 0.85)",
+                borderRadius: 4,
+            }
+        ];
+        this.timelineChart.update();
     }
 
     populateHotspots(sourcesGeojson, onSelectRow) {

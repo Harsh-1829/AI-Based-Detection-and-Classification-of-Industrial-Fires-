@@ -23,7 +23,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/styles.css?v=noaa21">
+    <link rel="stylesheet" href="/static/css/styles.css?v=2026_live_v8">
 </head>
 
 <body class="dark-theme">
@@ -54,8 +54,8 @@
             <div class="navbar-center">
                 <div class="kpi-ticker">
                     <div class="kpi-chip" id="kpi-total">
-                        <span class="kpi-label">TOTAL ANOMALIES</span>
-                        <span class="kpi-val" id="val-total-count">--</span>
+                        <span class="kpi-label">LIVE ANOMALIES</span>
+                        <span class="kpi-val" id="val-total-count"><i class="fa-solid fa-spinner fa-spin"></i></span>
                     </div>
                     <div class="kpi-divider"></div>
                     <div class="kpi-chip chip-industrial">
@@ -90,15 +90,29 @@
             </div>
 
             <div class="navbar-right">
-                <button id="btn-realtime-toggle" class="btn btn-live-mode"
-                    title="View Real-Time NASA FIRMS Live Thermal Anomalies">
-                    <span class="live-pulse-dot"></span>
-                    <span id="realtime-btn-label">🔴 Live FIRMS Feed</span>
+                <div class="live-pill-badge" id="live-indicator-pill"
+                    title="Live NASA FIRMS satellite monitoring is active">
+                    <span class="live-pulse-dot live-green"></span>
+                    <span id="live-status-text">LIVE SATELLITE STREAM</span>
+                </div>
+                <div class="live-window-wrapper">
+                    <select id="select-live-window" class="custom-select live-select-pill"
+                        title="Select Live Observation Window">
+                        <option value="5" selected>5 Days Live Stream (Active Hotspots)</option>
+                        <option value="2">48h Window</option>
+                        <option value="1">24h (Today)</option>
+                        <option value="7">7 Days Stream</option>
+                    </select>
+                </div>
+                <button id="btn-sync-live" class="btn btn-primary glow-btn"
+                    title="Fetch latest satellite detections from NASA FIRMS">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Sync Live</span>
                 </button>
-                <button id="btn-fetch-firms" class="btn btn-primary glow-btn"
-                    title="Sync & Ingest NASA FIRMS Real-time URT API">
-                    <i class="fa-solid fa-satellite-dish"></i>
-                    <span>Sync NASA FIRMS</span>
+                <button id="btn-mode-toggle" class="btn btn-glass"
+                    title="Toggle between Live Real-time Stream and Historical Archive">
+                    <i class="fa-solid fa-database"></i>
+                    <span id="label-mode-toggle">Archive Data</span>
                 </button>
                 <button id="btn-toggle-analytics" class="btn btn-glass" title="Toggle Analytics Charts Drawer">
                     <i class="fa-solid fa-chart-pie"></i>
@@ -325,12 +339,13 @@
                 <div id="gis-map" class="gis-map"></div>
 
                 <!-- Live Feed Indicator Banner -->
-                <div id="realtime-status-banner" class="realtime-status-banner glass-card hidden">
+                <div id="realtime-status-banner" class="realtime-status-banner glass-card">
                     <div class="banner-content">
-                        <span class="live-pulse-dot"></span>
+                        <span class="live-pulse-dot live-green"></span>
                         <div class="banner-text">
-                            <span class="banner-badge">🛰️ LIVE NASA FIRMS</span>
-                            <span id="realtime-banner-msg">Fetching real-time VIIRS anomalies...</span>
+                            <span class="banner-badge">🛰️ LIVE SATELLITE STREAM (VIIRS NOAA-21)</span>
+                            <span id="realtime-banner-msg">Synchronizing real-time thermal anomalies from
+                                space...</span>
                         </div>
                     </div>
                     <div class="banner-actions">
@@ -338,8 +353,8 @@
                             <i class="fa-solid fa-clock-rotate-left"></i> <span id="label-realtime-days">5 Days
                                 Window</span>
                         </button>
-                        <button id="btn-exit-realtime" class="btn btn-primary btn-xs">
-                            <i class="fa-solid fa-layer-group"></i> Full Baseline
+                        <button id="btn-banner-sync" class="btn btn-primary btn-xs" title="Refresh Live Satellite Feed">
+                            <i class="fa-solid fa-arrows-rotate"></i> Refresh Feed
                         </button>
                     </div>
                 </div>
@@ -484,6 +499,87 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Meteorological Intelligence & Wildfire Feasibility -->
+                            <div class="detail-section" id="detail-weather-section">
+                                <div class="section-label">
+                                    <i class="fa-solid fa-cloud-sun-rain"></i> Meteorological Intelligence & Fire
+                                    Feasibility
+                                </div>
+                                <div class="weather-intel-box">
+                                    <div class="weather-metrics-grid">
+                                        <div class="w-item">
+                                            <span class="w-icon">🌡️</span>
+                                            <div>
+                                                <span class="w-val" id="detail-weather-temp">--°C</span>
+                                                <span class="w-label">Ambient Temp</span>
+                                            </div>
+                                        </div>
+                                        <div class="w-item">
+                                            <span class="w-icon">💧</span>
+                                            <div>
+                                                <span class="w-val" id="detail-weather-rh">--%</span>
+                                                <span class="w-label">Relative Humidity</span>
+                                            </div>
+                                        </div>
+                                        <div class="w-item">
+                                            <span class="w-icon">🌧️</span>
+                                            <div>
+                                                <span class="w-val" id="detail-weather-rain">-- mm</span>
+                                                <span class="w-label">Precipitation</span>
+                                            </div>
+                                        </div>
+                                        <div class="w-item">
+                                            <span class="w-icon">💨</span>
+                                            <div>
+                                                <span class="w-val" id="detail-weather-wind">-- km/h</span>
+                                                <span class="w-label">Wind Speed</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="detail-weather-verdict" class="weather-verdict-card">
+                                        <div class="verdict-header">
+                                            <span id="detail-weather-badge"
+                                                class="badge-weather badge-suppressed">ANALYZING WEATHER...</span>
+                                        </div>
+                                        <p id="detail-weather-text" class="verdict-desc">
+                                            Evaluating fuel moisture and physical wildfire feasibility...
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Optical Footprint Validation (ESA WorldCover) -->
+                            <div class="detail-section" id="detail-recon-section">
+                                <div class="section-label">
+                                    <i class="fa-solid fa-satellite-dish"></i> Optical Footprint Validation
+                                    <span class="label-tag">ESA WorldCover &middot; 375m VIIRS</span>
+                                </div>
+                                <div class="recon-box">
+                                    <div id="recon-loading" class="recon-loading">
+                                        <i class="fa-solid fa-satellite fa-spin"></i>
+                                        <span>Sampling land-cover pixels in VIIRS footprint&hellip;</span>
+                                    </div>
+                                    <div id="recon-result" class="recon-result hidden">
+                                        <div class="recon-label-row">
+                                            <span class="recon-sub">Dominant cover in 375m footprint:</span>
+                                            <strong id="recon-dominant" class="recon-dominant">&mdash;</strong>
+                                        </div>
+                                        <div class="recon-bars" id="recon-bars"></div>
+                                        <div class="recon-verdict-card" id="recon-verdict-card">
+                                            <div class="recon-verdict-row">
+                                                <span class="recon-verdict-badge" id="recon-verdict-badge">&mdash;</span>
+                                                <span class="recon-pixels" id="recon-pixels">&mdash; px sampled</span>
+                                            </div>
+                                            <p class="recon-verdict-text" id="recon-verdict-text">&mdash;</p>
+                                        </div>
+                                        <div class="recon-mixed-warning hidden" id="recon-mixed-warning">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                            <span id="recon-mixed-text">&mdash;</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -567,7 +663,7 @@
                 <div class="drawer-bar-title">
                     <i class="fa-solid fa-chart-line"></i>
                     <span>Geospatial Intelligence & Analytics Hub</span>
-                    <span class="badge" id="stats-summary-pill">31,122 Records Ingested</span>
+                    <span class="badge" id="stats-summary-pill">🛰️ Live NASA FIRMS Active</span>
                 </div>
                 <button id="btn-drawer-collapse" class="btn-icon-tiny">
                     <i class="fa-solid fa-chevron-up"></i>
@@ -654,8 +750,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Custom Application Scripts -->
-    <script src="/static/js/charts.js?v=noaa21"></script>
-    <script src="/static/js/app.js?v=noaa21"></script>
+    <script src="/static/js/charts.js?v=2026_live_v8"></script>
+    <script src="/static/js/app.js?v=2026_live_v8"></script>
 </body>
 
 </html>

@@ -129,9 +129,35 @@ def health_check():
 
 
 @app.get("/api/stats")
-def get_stats():
-    """Return summary statistics for the dashboard."""
+def get_stats(
+    mode: str = Query("realtime", description="realtime or baseline"),
+    days: int = Query(5, ge=1, le=10),
+    source: str = Query("VIIRS_NOAA21_NRT"),
+    force_refresh: bool = Query(False),
+):
+    """Return summary statistics for the dashboard (realtime by default)."""
+    if mode == "realtime":
+        realtime_data = fetch_and_classify_realtime(days=days, source=source, force_refresh=force_refresh)
+        meta = realtime_data.get("metadata", {})
+        return {
+            "mode": "realtime",
+            "total_detections": meta.get("count", 0),
+            "by_class": meta.get("class_summary", {}),
+            "max_frp": meta.get("max_frp", 0.0),
+            "avg_frp": meta.get("avg_frp", 0.0),
+            "persistent_sources_count": len(meta.get("sources", [])),
+            "frp_by_class": meta.get("frp_by_class", {}),
+            "days": days,
+            "source": source,
+            "timestamp": meta.get("timestamp", datetime.utcnow().isoformat()),
+            "class_colors": CLASS_COLORS,
+            "class_icons": CLASS_ICONS,
+            "map_center": JHARKHAND_CENTER,
+            "bbox": JHARKHAND_BBOX,
+        }
+
     stats = db.get_statistics()
+    stats["mode"] = "baseline"
     stats["class_colors"] = CLASS_COLORS
     stats["class_icons"] = CLASS_ICONS
     stats["map_center"] = JHARKHAND_CENTER
@@ -224,7 +250,7 @@ def get_persistent_sources(
     return {
         "type": "FeatureCollection",
         "features": features,
-        "metadata": {"count": len(features)},
+        "metadata": {"count": len(features), "mode": "baseline"},
     }
 
 
@@ -273,6 +299,195 @@ def get_jharkhand_boundary():
         return json.load(f)
 
 
+@app.get("/api/weather/evaluate")
+def evaluate_weather_at_point(
+    latitude: float = Query(..., ge=-90.0, le=90.0),
+    longitude: float = Query(..., ge=-180.0, le=180.0),
+    predicted_class: Optional[str] = Query(None),
+):
+    """
+    Evaluate real-time meteorological conditions and wildfire propagation feasibility
+    using Open-Meteo live API to detect false alarms and post-monsoon suppression.
+    """
+    from data_ingestion.weather_client import fetch_weather_and_feasibility
+    return fetch_weather_and_feasibility(latitude, longitude, predicted_class)
+
+
+@app.get("/api/landcover/validate")
+def validate_landcover_footprint(
+    latitude: float = Query(..., ge=-90.0, le=90.0),
+    longitude: float = Query(..., ge=-180.0, le=180.0),
+    predicted_class: Optional[str] = Query(None),
+    radius_m: int = Query(375, ge=100, le=2000, description="VIIRS pixel footprint radius in metres"),
+):
+    """
+    Sample ESA WorldCover 10m raster pixels within the VIIRS 375m footprint
+    around the given coordinate and return a land-cover composition breakdown
+    with an automated validation verdict for the predicted fire class.
+    """
+    try:
+        import rasterio
+        import rasterio.transform
+        import numpy as np
+        import math
+    except ImportError:
+        raise HTTPException(status_code=500, detail="rasterio/numpy not available")
+
+    tif_path = BASE_DIR / "jharkhand_landcover.tif"
+    if not tif_path.exists():
+        raise HTTPException(status_code=404, detail="Land-cover GeoTIFF not found")
+
+    # WorldCover class codes → human labels
+    WC_CLASSES = {
+        10: "Tree cover",
+        20: "Shrubland",
+        30: "Grassland",
+        40: "Cropland",
+        50: "Built-up",
+        60: "Bare/sparse vegetation",
+        70: "Snow and ice",
+        80: "Permanent water bodies",
+        90: "Herbaceous wetland",
+        95: "Mangroves",
+        100: "Moss and lichen",
+    }
+
+    try:
+        with rasterio.open(str(tif_path)) as ds:
+            transform = ds.transform
+            band = ds.read(1)
+            rows, cols = band.shape
+
+            # Degrees per metre approximation
+            deg_lat = radius_m / 111320.0
+            deg_lon = radius_m / (111320.0 * math.cos(math.radians(latitude)))
+
+            # Pixel window covering the footprint bounding box
+            r_min, c_min = rasterio.transform.rowcol(transform, longitude - deg_lon, latitude + deg_lat)
+            r_max, c_max = rasterio.transform.rowcol(transform, longitude + deg_lon, latitude - deg_lat)
+
+            r_min = max(0, int(r_min))
+            r_max = min(rows - 1, int(r_max))
+            c_min = max(0, int(c_min))
+            c_max = min(cols - 1, int(c_max))
+
+            # Guard: ensure valid window
+            if r_min > r_max or c_min > c_max:
+                r_c, c_c = rasterio.transform.rowcol(transform, longitude, latitude)
+                r_min = r_max = max(0, min(rows - 1, int(r_c)))
+                c_min = c_max = max(0, min(cols - 1, int(c_c)))
+
+            window_pixels = band[r_min:r_max + 1, c_min:c_max + 1].flatten()
+            total = len(window_pixels)
+
+            if total == 0:
+                raise ValueError("Empty pixel window")
+
+            # Count each class
+            pixel_counts: dict = {}
+            for code, name in WC_CLASSES.items():
+                count = int(np.sum(window_pixels == code))
+                if count > 0:
+                    pixel_counts[name] = round(count / total * 100, 1)
+
+            # Dominant class
+            dominant = max(pixel_counts, key=pixel_counts.get) if pixel_counts else "Unknown"
+            forest_pct = pixel_counts.get("Tree cover", 0.0)
+            buildup_pct = pixel_counts.get("Built-up", 0.0)
+            bare_pct = pixel_counts.get("Bare/sparse vegetation", 0.0)
+            crop_pct = pixel_counts.get("Cropland", 0.0)
+
+    except Exception as e:
+        logger.warning(f"Landcover footprint sampling failed: {e}")
+        return {
+            "latitude": latitude, "longitude": longitude,
+            "radius_m": radius_m, "pixel_counts": {}, "dominant_class": "Unknown",
+            "forest_pct": 0, "buildup_pct": 0, "bare_pct": 0,
+            "verdict": "INSUFFICIENT_DATA",
+            "verdict_text": "Could not sample ESA WorldCover raster for this location.",
+            "verdict_color": "#94a3b8",
+            "mixed_pixel_warning": False,
+        }
+
+    # ---- Automated validation logic ----
+    is_mixed = forest_pct > 10 and (buildup_pct + bare_pct) > 10
+    verdict = "UNVERIFIED"
+    verdict_text = ""
+    verdict_color = "#94a3b8"
+
+    if predicted_class == "Forest fire":
+        if forest_pct >= 60:
+            verdict = "CONFIRMED_FOREST"
+            verdict_text = f"✅ {forest_pct:.0f}% tree cover in 375m footprint strongly supports a forest/vegetation fire classification."
+            verdict_color = "#22c55e"
+        elif forest_pct >= 30:
+            verdict = "PARTIAL_FOREST"
+            verdict_text = f"⚠️ Mixed pixel: {forest_pct:.0f}% forest + {buildup_pct:.0f}% built-up. Possible mis-classification — industrial or mine activity may be the true source."
+            verdict_color = "#f59e0b"
+        else:
+            verdict = "LIKELY_MISCLASSIFIED"
+            verdict_text = f"🚨 Only {forest_pct:.0f}% tree cover detected. Dominant land cover is '{dominant}' ({buildup_pct:.0f}% built-up, {bare_pct:.0f}% bare). This is likely an INDUSTRIAL or MINING hotspot mis-labelled as Forest fire."
+            verdict_color = "#ef4444"
+    elif predicted_class == "Industrial":
+        if buildup_pct + bare_pct >= 50:
+            verdict = "CONFIRMED_INDUSTRIAL"
+            verdict_text = f"✅ {buildup_pct:.0f}% built-up + {bare_pct:.0f}% bare/sparse land supports industrial classification."
+            verdict_color = "#ef4444"
+        elif forest_pct >= 40:
+            verdict = "CHECK_REQUIRED"
+            verdict_text = f"⚠️ Unexpectedly high forest cover ({forest_pct:.0f}%) near an industrial classification. Review OSM proximity data."
+            verdict_color = "#f59e0b"
+        else:
+            verdict = "PLAUSIBLE"
+            verdict_text = f"Dominant land-cover: '{dominant}'. Industrial classification is plausible for this mixed-use area."
+            verdict_color = "#f97316"
+    elif predicted_class in ("Quarry/Mining",):
+        if bare_pct + buildup_pct >= 40:
+            verdict = "CONFIRMED_MINING"
+            verdict_text = f"✅ {bare_pct:.0f}% bare/sparse + {buildup_pct:.0f}% built-up land aligns with open-cast mining or quarry activity."
+            verdict_color = "#f97316"
+        else:
+            verdict = "PLAUSIBLE"
+            verdict_text = f"Dominant land-cover: '{dominant}'. Mining classification is plausible."
+            verdict_color = "#f97316"
+    elif predicted_class in ("Agricultural burning", "Vegetation fire (open/scrub)"):
+        if crop_pct + pixel_counts.get("Grassland", 0) + pixel_counts.get("Shrubland", 0) >= 40:
+            verdict = "CONFIRMED"
+            verdict_text = f"✅ Agricultural/vegetation cover confirmed in footprint."
+            verdict_color = "#eab308"
+        else:
+            verdict = "PLAUSIBLE"
+            verdict_text = f"Dominant: '{dominant}'. Classification is plausible."
+            verdict_color = "#eab308"
+    else:
+        verdict = "UNVERIFIED"
+        verdict_text = f"Dominant land-cover in 375m footprint: '{dominant}' ({pixel_counts.get(dominant, 0):.0f}%)."
+        verdict_color = "#94a3b8"
+
+    if is_mixed:
+        mixed_warning = f"Mixed-pixel boundary detected: {forest_pct:.0f}% forest / {buildup_pct:.0f}% built-up / {bare_pct:.0f}% bare coexist in footprint."
+    else:
+        mixed_warning = None
+
+    return {
+        "latitude": latitude,
+        "longitude": longitude,
+        "radius_m": radius_m,
+        "total_pixels_sampled": total,
+        "pixel_counts": pixel_counts,
+        "dominant_class": dominant,
+        "forest_pct": forest_pct,
+        "buildup_pct": buildup_pct,
+        "bare_pct": bare_pct,
+        "crop_pct": crop_pct,
+        "verdict": verdict,
+        "verdict_text": verdict_text,
+        "verdict_color": verdict_color,
+        "mixed_pixel_warning": mixed_warning,
+        "predicted_class": predicted_class,
+    }
+
+
 @app.post("/api/fetch-firms")
 def fetch_firms_live(
     days: int = Query(1, ge=1, le=10, description="Number of days to query (1-10)"),
@@ -318,16 +533,22 @@ def fetch_firms_live(
     }
 
 
-@app.get("/api/detections/realtime")
-def get_realtime_detections(
-    days: int = Query(5, ge=1, le=5, description="Number of days to query (1-5)"),
-    source: str = Query("VIIRS_NOAA21_NRT", description="Satellite data source (VIIRS_NOAA21_NRT)"),
-):
-    """
-    Directly query NASA FIRMS URT for real-time detections, enrich with LandCover + OSM,
-    classify with XGBoost Model B, and return GeoJSON of ONLY the real-time anomalies.
-    """
-    logger.info(f"Querying real-time FIRMS detections: {days} days from {source}...")
+# In-memory realtime cache
+_realtime_cache = {}
+_CACHE_TTL_SECONDS = 90
+
+def fetch_and_classify_realtime(days: int = 5, source: str = "VIIRS_NOAA21_NRT", force_refresh: bool = False) -> dict:
+    """Fetch live NASA FIRMS detections, enrich, classify with Model B, and compute real-time metrics."""
+    import time
+    cache_key = (days, source)
+    now = time.time()
+    if not force_refresh and cache_key in _realtime_cache:
+        cached_time, cached_data = _realtime_cache[cache_key]
+        if now - cached_time < _CACHE_TTL_SECONDS:
+            logger.info(f"Returning cached real-time FIRMS data for {cache_key} (age: {int(now - cached_time)}s)")
+            return cached_data
+
+    logger.info(f"Querying real-time FIRMS detections: {days} days from {source} (force_refresh={force_refresh})...")
     try:
         raw_df = firms_client.fetch_area(days=days, source=source)
         raw_df = filter_by_jharkhand_polygon(raw_df)
@@ -336,7 +557,7 @@ def get_realtime_detections(
         raise HTTPException(status_code=502, detail=f"NASA FIRMS API error: {str(e)}")
 
     if raw_df.empty:
-        return {
+        empty_res = {
             "type": "FeatureCollection",
             "features": [],
             "metadata": {
@@ -345,15 +566,63 @@ def get_realtime_detections(
                 "source": source,
                 "message": f"0 active thermal anomalies detected in Jharkhand in the past {days} day(s).",
                 "timestamp": datetime.utcnow().isoformat(),
+                "class_summary": {cls: 0 for cls in MODEL_CLASSES},
+                "max_frp": 0.0,
+                "avg_frp": 0.0,
+                "sources": [],
+                "frp_by_class": {},
             },
         }
+        _realtime_cache[cache_key] = (now, empty_res)
+        return empty_res
 
-    # Enrich with LandCover & OSM
+    # Step 1: Enrich with LandCover & OSM
     enriched_df = landcover_enricher.enrich(raw_df)
     enriched_df = osm_enricher.enrich(enriched_df)
 
-    # Classify with Model B
+    # Step 2: Classify with Model B
     classified_df = classifier.classify_raw(enriched_df, historical_df=db._df)
+
+    # Step 3: Compute live hotspots & persistent clusters
+    active_sources = []
+    if "source_cluster_id" in classified_df.columns:
+        for cid, grp in classified_df.groupby("source_cluster_id"):
+            lead = grp.iloc[0]
+            dom_class = str(grp["predicted_class"].mode().iloc[0] if not grp["predicted_class"].empty else "Industrial")
+            active_sources.append({
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [round(float(lead["longitude"]), 5), round(float(lead["latitude"]), 5)]
+                },
+                "properties": {
+                    "source_cluster_id": str(cid),
+                    "dominant_class": dom_class,
+                    "color": CLASS_COLORS.get(dom_class, "#ef4444"),
+                    "detection_count": int(len(grp)),
+                    "avg_frp": round(float(grp["frp"].mean()), 2) if "frp" in grp else 0.0,
+                    "max_frp": round(float(grp["frp"].max()), 2) if "frp" in grp else 0.0,
+                    "avg_confidence": round(float(grp["prediction_confidence"].mean()), 4) if "prediction_confidence" in grp else 0.9,
+                    "first_seen": str(grp["acq_date"].min()) if "acq_date" in grp else "Today",
+                    "last_seen": str(grp["acq_date"].max()) if "acq_date" in grp else "Today",
+                    "active_days": int(grp["acq_date"].nunique()) if "acq_date" in grp else 1,
+                    "nearest_osm_name": str(lead.get("nearest_osm_name", "Industrial Facility")),
+                }
+            })
+        active_sources.sort(key=lambda s: (s["properties"]["detection_count"], s["properties"]["max_frp"]), reverse=True)
+
+    max_frp = round(float(classified_df["frp"].max()), 2) if "frp" in classified_df and not classified_df["frp"].dropna().empty else 0.0
+    avg_frp = round(float(classified_df["frp"].mean()), 2) if "frp" in classified_df and not classified_df["frp"].dropna().empty else 0.0
+
+    frp_by_class = {}
+    if "frp" in classified_df.columns:
+        for cls, grp in classified_df.groupby("predicted_class"):
+            frp_by_class[cls] = round(float(grp["frp"].mean()), 2)
+
+    class_summary = classified_df["predicted_class"].value_counts().to_dict()
+    for cls in MODEL_CLASSES:
+        if cls not in class_summary:
+            class_summary[cls] = 0
 
     # Convert to GeoJSON
     geojson = db.to_geojson(classified_df)
@@ -361,11 +630,30 @@ def get_realtime_detections(
         "count": len(classified_df),
         "days": days,
         "source": source,
-        "class_summary": classified_df["predicted_class"].value_counts().to_dict(),
+        "class_summary": class_summary,
+        "max_frp": max_frp,
+        "avg_frp": avg_frp,
         "timestamp": datetime.utcnow().isoformat(),
-        "message": f"Successfully retrieved {len(classified_df)} real-time thermal anomalies from NASA FIRMS.",
+        "message": f"Successfully retrieved {len(classified_df)} real-time thermal anomalies from NASA FIRMS ({source}).",
+        "sources": active_sources[:50],
+        "frp_by_class": frp_by_class,
     }
+
+    _realtime_cache[cache_key] = (now, geojson)
     return geojson
+
+
+@app.get("/api/detections/realtime")
+def get_realtime_detections(
+    days: int = Query(5, ge=1, le=10, description="Number of days to query (1-10)"),
+    source: str = Query("VIIRS_NOAA21_NRT", description="Satellite data source (VIIRS_NOAA21_NRT)"),
+    force_refresh: bool = Query(False, description="Bypass cache and force fresh pull from NASA FIRMS"),
+):
+    """
+    Directly query NASA FIRMS URT for real-time detections, enrich with LandCover + OSM,
+    classify with XGBoost Model B, and return GeoJSON of ONLY the real-time anomalies.
+    """
+    return fetch_and_classify_realtime(days=days, source=source, force_refresh=force_refresh)
 
 
 @app.post("/api/classify-point")
