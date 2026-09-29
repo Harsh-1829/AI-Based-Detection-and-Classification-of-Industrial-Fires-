@@ -1,5 +1,5 @@
 /**
- * AGNI-VISION — GIS Analytics & Charts Module
+ * ThermalIntell — GIS Analytics & Charts Module
  * Powered by Chart.js 4.x
  * Cowboy Space Dark-Warm Palette
  */

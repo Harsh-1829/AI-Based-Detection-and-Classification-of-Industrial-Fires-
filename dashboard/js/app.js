@@ -1,5 +1,5 @@
 /**
- * AGNI-VISION — Main GIS Dashboard Application
+ * ThermalIntell — Main GIS Dashboard Application
  * Leaflet.js + NASA FIRMS + XGBoost Model B Integration
  */
 

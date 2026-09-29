@@ -1,5 +1,5 @@
 """
-AGNI-VISION — Pipeline Orchestrator CLI
+ThermalIntell — Pipeline Orchestrator CLI
 ======================================
 Executes the full end-to-end data processing and classification pipeline:
 1. Data Ingestion (NASA FIRMS API or historical CSV)
@@ -49,7 +49,7 @@ def run_pipeline(
 ):
     start_time = time.time()
     print("=" * 70)
-    print("      AGNI-VISION: AI THERMAL ANOMALY CLASSIFICATION PIPELINE      ")
+    print("      THERMALINTELL: AI THERMAL ANOMALY CLASSIFICATION PIPELINE      ")
     print("=" * 70)
 
     # -------------------------------------------------------------
@@ -148,7 +148,7 @@ def run_pipeline(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AGNI-VISION Thermal Anomaly Classification Pipeline"
+        description="ThermalIntell Thermal Anomaly Classification Pipeline"
     )
     parser.add_argument(
         "--source",
