@@ -122,6 +122,11 @@
                     <i class="fa-solid fa-crosshairs"></i>
                     <span>AI Simulator</span>
                 </button>
+                <button id="btn-alert-log" class="btn btn-glass btn-alert-log" title="View Alert Dispatch Log">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Dispatch Log</span>
+                    <span id="alert-log-badge" class="alert-log-badge hidden">0</span>
+                </button>
             </div>
         </header>
 
@@ -595,6 +600,21 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Automated Alert Dispatcher Trigger -->
+                            <div class="detail-section detail-dispatch-section">
+                                <div class="section-label">
+                                    <i class="fa-solid fa-bell-concierge"></i> Emergency Response Dispatch
+                                </div>
+                                <div class="dispatch-triage-hint" id="dispatch-triage-hint">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                    <span id="dispatch-hint-text">Severity will be auto-computed from FRP &amp; AI confidence.</span>
+                                </div>
+                                <button id="btn-dispatch-alerts" class="btn btn-dispatch btn-block" onclick="window.AlertDispatcher && window.AlertDispatcher.openForDetection(window.__lastDetection || {})">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                    <span>Dispatch Emergency Alerts</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -751,6 +771,132 @@
         <!-- Toast Notification Center -->
         <div id="toast-container" class="toast-container"></div>
 
+        <!-- ============================================================ -->
+        <!-- ALERT DISPATCH MODAL                                          -->
+        <!-- ============================================================ -->
+        <div id="alert-dispatch-modal" class="adm-overlay">
+            <div class="adm-modal">
+                <!-- Modal Header -->
+                <div class="adm-header">
+                    <div class="adm-header-left">
+                        <i id="adm-severity-icon" class="fa-solid fa-triangle-exclamation"></i>
+                        <div class="adm-header-text">
+                            <div class="adm-header-top">
+                                <span id="adm-severity-badge" class="adm-severity-badge sev-critical">CRITICAL</span>
+                                <span id="adm-incident-id" class="adm-incident-id">JH-IND-0000</span>
+                            </div>
+                            <div id="adm-sla" class="adm-sla-text">Response SLA: 5 min</div>
+                        </div>
+                    </div>
+                    <button id="adm-btn-close" class="btn-icon adm-close-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- Escalation Banner -->
+                <div id="adm-escalation" class="adm-escalation-banner">Immediate field deployment required.</div>
+
+                <!-- Detection Summary -->
+                <div class="adm-section-label">Detection Summary</div>
+                <div class="adm-summary-grid">
+                    <div class="adm-summary-item">
+                        <span class="adm-summary-key">Class</span>
+                        <span class="adm-summary-val" id="adm-class">--</span>
+                    </div>
+                    <div class="adm-summary-item">
+                        <span class="adm-summary-key">FRP</span>
+                        <span class="adm-summary-val" id="adm-frp">-- MW</span>
+                    </div>
+                    <div class="adm-summary-item">
+                        <span class="adm-summary-key">AI Confidence</span>
+                        <span class="adm-summary-val" id="adm-conf">--%</span>
+                    </div>
+                    <div class="adm-summary-item">
+                        <span class="adm-summary-key">Coordinates</span>
+                        <span class="adm-summary-val" id="adm-coords">--</span>
+                    </div>
+                    <div class="adm-summary-item">
+                        <span class="adm-summary-key">District Est.</span>
+                        <span class="adm-summary-val" id="adm-district">--</span>
+                    </div>
+                    <div class="adm-summary-item">
+                        <span class="adm-summary-key">Detected At</span>
+                        <span class="adm-summary-val" id="adm-datetime">--</span>
+                    </div>
+                </div>
+
+                <!-- Agencies -->
+                <div class="adm-section-label"><i class="fa-solid fa-building-shield"></i> Notifying Agencies</div>
+                <div id="adm-agency-list" class="adm-recipient-list"></div>
+
+                <!-- Channels -->
+                <div class="adm-section-label"><i class="fa-solid fa-share-nodes"></i> Dispatch Channels</div>
+                <div id="adm-channel-list" class="adm-recipient-list"></div>
+
+                <!-- Progress -->
+                <div class="adm-progress-wrap">
+                    <div class="adm-progress-track">
+                        <div id="adm-progress-fill" class="adm-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="adm-progress-label" class="adm-progress-label">Ready to dispatch</span>
+                </div>
+
+                <!-- Done Panel -->
+                <div id="adm-done-panel" class="adm-done-panel hidden">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span id="adm-done-text">All recipients notified.</span>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="adm-footer">
+                    <button id="adm-btn-dispatch" class="btn adm-dispatch-btn">
+                        <i class="fa-solid fa-paper-plane"></i> Dispatch All Alerts
+                    </button>
+                    <button class="btn btn-glass" onclick="document.getElementById('alert-dispatch-modal').classList.remove('active'); document.body.classList.remove('modal-open');">
+                        <i class="fa-solid fa-xmark"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- ALERT DISPATCH LOG MODAL                                       -->
+        <!-- ============================================================ -->
+        <div id="alert-log-modal" class="adm-overlay">
+            <div class="adm-modal adm-log-modal">
+                <div class="adm-header">
+                    <div class="adm-header-left">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <div class="adm-header-text">
+                            <div class="adm-header-top"><span style="font-size:13px; font-weight:700; color: var(--text-primary);">Alert Dispatch Log</span></div>
+                            <div class="adm-sla-text">Session history of all dispatched emergency alerts</div>
+                        </div>
+                    </div>
+                    <button id="alm-btn-close" class="btn-icon adm-close-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="adm-log-table-wrap custom-scroll">
+                    <table class="adm-log-table">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Incident ID</th>
+                                <th>Agencies</th>
+                                <th>Channels</th>
+                                <th>Delivered</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alm-log-body">
+                            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px 0;">No dispatches yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="adm-footer">
+                    <button class="btn btn-glass" onclick="document.getElementById('alert-log-modal').classList.remove('active'); document.body.classList.remove('modal-open');">
+                        <i class="fa-solid fa-xmark"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Google Maps API -->
@@ -766,7 +912,8 @@
 
     <!-- Custom Application Scripts -->
     <script src="/static/js/charts.js?v=2026_milkin_v11"></script>
-    <script src="/static/js/app.js?v=2026_milkin_v11"></script>
+    <script src="/static/js/alert-dispatcher.js?v=2026_milkin_v12"></script>
+    <script src="/static/js/app.js?v=2026_milkin_v12"></script>
 </body>
 
 </html>

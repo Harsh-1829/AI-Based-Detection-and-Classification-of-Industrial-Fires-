@@ -474,6 +474,27 @@
 
         // Optical Footprint Validation (ESA WorldCover)
         fetchAndRenderSatelliteRecon(p.latitude, p.longitude, p.predicted_class);
+
+        // Store for Alert Dispatcher access via inline button onclick
+        window.__lastDetection = p;
+
+        // Update dispatch hint with computed severity
+        if (window.AlertDispatcher) {
+            const sevKey = window.AlertDispatcher.computeSeverity(p);
+            const hintEl = document.getElementById("dispatch-hint-text");
+            const hintWrap = document.getElementById("dispatch-triage-hint");
+            if (hintEl && hintWrap) {
+                const sevColors = { CRITICAL: "#b84226", HIGH: "#a86e35", MODERATE: "#8f7b2c" };
+                const sevLabels = {
+                    CRITICAL: "⚠️ CRITICAL severity — FRP / class triggers immediate NDRF dispatch.",
+                    HIGH: "🔥 HIGH severity — District agencies & fire brigade will be alerted.",
+                    MODERATE: "🟡 MODERATE severity — Local brigade & PCB monitoring cell notified.",
+                };
+                hintEl.textContent = sevLabels[sevKey] || "Severity computed from FRP & AI confidence.";
+                hintWrap.style.borderLeftColor = sevColors[sevKey] || "#8f7b2c";
+                hintWrap.style.color = sevColors[sevKey] || "#8f7b2c";
+            }
+        }
     }
 
     /**
