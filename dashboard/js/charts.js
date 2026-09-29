@@ -1,6 +1,7 @@
 /**
  * AGNI-VISION — GIS Analytics & Charts Module
  * Powered by Chart.js 4.x
+ * Max Milkin Color Palette Aesthetic
  */
 
 class DashboardCharts {
@@ -9,12 +10,13 @@ class DashboardCharts {
         this.timelineChart = null;
         this.frpChart = null;
 
+        // Max Milkin inspired classification palette
         this.colors = {
-            "Industrial": "#ef4444",
-            "Forest fire": "#22c55e",
-            "Quarry/Mining": "#f97316",
-            "Agricultural burning": "#eab308",
-            "Vegetation fire (open/scrub)": "#a855f7",
+            "Industrial": "#b84226",                    // Matte terracotta rust
+            "Forest fire": "#3b4039",                   // Slate olive charcoal
+            "Quarry/Mining": "#a86e35",                 // Warm raw umber
+            "Agricultural burning": "#8f7b2c",          // Antique gold / moss
+            "Vegetation fire (open/scrub)": "#5e5469",  // Muted slate mauve
         };
     }
 
@@ -35,9 +37,9 @@ class DashboardCharts {
                 datasets: [{
                     data: [10106, 7427, 7335, 1114, 5140],
                     backgroundColor: Object.values(this.colors),
-                    borderColor: "#0e1322",
+                    borderColor: "#c2cabb",
                     borderWidth: 2,
-                    hoverOffset: 6,
+                    hoverOffset: 4,
                 }]
             },
             options: {
@@ -47,18 +49,19 @@ class DashboardCharts {
                     legend: {
                         position: "bottom",
                         labels: {
-                            color: "#94a3b8",
-                            boxWidth: 10,
+                            color: "#3b4039",
+                            boxWidth: 9,
                             font: { size: 10, family: "Inter" },
                             padding: 8,
                         }
                     },
                     tooltip: {
-                        backgroundColor: "rgba(15, 23, 42, 0.95)",
-                        titleColor: "#f8fafc",
-                        bodyColor: "#cbd5e1",
-                        borderColor: "rgba(255, 255, 255, 0.1)",
+                        backgroundColor: "#10120f",
+                        titleColor: "#f5f5f5",
+                        bodyColor: "#c2cabb",
+                        borderColor: "#3b4039",
                         borderWidth: 1,
+                        padding: 8,
                         callbacks: {
                             label: function(context) {
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -88,25 +91,25 @@ class DashboardCharts {
                     {
                         label: "Industrial",
                         data: [750, 810, 890, 920, 860, 780, 820, 850, 890, 940, 880, 916],
-                        backgroundColor: "rgba(239, 68, 68, 0.8)",
+                        backgroundColor: "#b84226",
                         borderRadius: 3,
                     },
                     {
                         label: "Forest Fire",
                         data: [210, 580, 1850, 2410, 1120, 180, 45, 30, 85, 220, 310, 387],
-                        backgroundColor: "rgba(34, 197, 94, 0.8)",
+                        backgroundColor: "#3b4039",
                         borderRadius: 3,
                     },
                     {
                         label: "Quarry/Mining",
                         data: [580, 620, 710, 740, 690, 580, 520, 540, 610, 680, 590, 475],
-                        backgroundColor: "rgba(249, 115, 22, 0.8)",
+                        backgroundColor: "#a86e35",
                         borderRadius: 3,
                     },
                     {
                         label: "Agri Burning",
                         data: [40, 65, 120, 280, 190, 50, 20, 15, 35, 160, 95, 49],
-                        backgroundColor: "rgba(234, 179, 8, 0.8)",
+                        backgroundColor: "#8f7b2c",
                         borderRadius: 3,
                     }
                 ]
@@ -118,12 +121,12 @@ class DashboardCharts {
                     x: {
                         stacked: true,
                         grid: { display: false },
-                        ticks: { color: "#64748b", font: { size: 10 } }
+                        ticks: { color: "#3b4039", font: { size: 9.5 } }
                     },
                     y: {
                         stacked: true,
-                        grid: { color: "rgba(255, 255, 255, 0.05)" },
-                        ticks: { color: "#64748b", font: { size: 10 } }
+                        grid: { color: "rgba(59, 64, 57, 0.15)" },
+                        ticks: { color: "#3b4039", font: { size: 9.5 } }
                     }
                 },
                 plugins: {
@@ -131,11 +134,19 @@ class DashboardCharts {
                         position: "top",
                         align: "end",
                         labels: {
-                            color: "#94a3b8",
+                            color: "#3b4039",
                             boxWidth: 8,
                             font: { size: 9 },
                             padding: 6,
                         }
+                    },
+                    tooltip: {
+                        backgroundColor: "#10120f",
+                        titleColor: "#f5f5f5",
+                        bodyColor: "#c2cabb",
+                        borderColor: "#3b4039",
+                        borderWidth: 1,
+                        padding: 8
                     }
                 }
             }
@@ -155,13 +166,13 @@ class DashboardCharts {
                         label: "Average FRP (MW)",
                         data: [4.8, 8.2, 3.4, 2.6, 3.1],
                         backgroundColor: [
-                            "rgba(239, 68, 68, 0.7)",
-                            "rgba(34, 197, 94, 0.7)",
-                            "rgba(249, 115, 22, 0.7)",
-                            "rgba(234, 179, 8, 0.7)",
-                            "rgba(168, 85, 247, 0.7)",
+                            "#b84226",
+                            "#3b4039",
+                            "#a86e35",
+                            "#8f7b2c",
+                            "#5e5469",
                         ],
-                        borderRadius: 4,
+                        borderRadius: 3,
                     }
                 ]
             },
@@ -171,16 +182,24 @@ class DashboardCharts {
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        grid: { color: "rgba(255, 255, 255, 0.05)" },
-                        ticks: { color: "#64748b", font: { size: 10 } }
+                        grid: { color: "rgba(59, 64, 57, 0.15)" },
+                        ticks: { color: "#3b4039", font: { size: 9.5 } }
                     },
                     y: {
                         grid: { display: false },
-                        ticks: { color: "#94a3b8", font: { size: 10 } }
+                        ticks: { color: "#3b4039", font: { size: 9.5 } }
                     }
                 },
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: "#10120f",
+                        titleColor: "#f5f5f5",
+                        bodyColor: "#c2cabb",
+                        borderColor: "#3b4039",
+                        borderWidth: 1,
+                        padding: 8
+                    }
                 }
             }
         });
@@ -204,7 +223,7 @@ class DashboardCharts {
             if (frpLabels.length > 0) {
                 this.frpChart.data.labels = frpLabels;
                 this.frpChart.data.datasets[0].data = frpVals;
-                this.frpChart.data.datasets[0].backgroundColor = frpLabels.map(l => this.colors[l] || "#06b6d4");
+                this.frpChart.data.datasets[0].backgroundColor = frpLabels.map(l => this.colors[l] || "#b84226");
                 this.frpChart.update();
             }
         }
@@ -233,26 +252,26 @@ class DashboardCharts {
             {
                 label: "Industrial",
                 data: sortedDates.map(d => dateMap[d]["Industrial"]),
-                backgroundColor: "rgba(239, 68, 68, 0.85)",
-                borderRadius: 4,
+                backgroundColor: "#b84226",
+                borderRadius: 3,
             },
             {
                 label: "Forest Fire",
                 data: sortedDates.map(d => dateMap[d]["Forest fire"]),
-                backgroundColor: "rgba(34, 197, 94, 0.85)",
-                borderRadius: 4,
+                backgroundColor: "#3b4039",
+                borderRadius: 3,
             },
             {
                 label: "Mining/Quarry",
                 data: sortedDates.map(d => dateMap[d]["Quarry/Mining"]),
-                backgroundColor: "rgba(249, 115, 22, 0.85)",
-                borderRadius: 4,
+                backgroundColor: "#a86e35",
+                borderRadius: 3,
             },
             {
                 label: "Agri Burning",
                 data: sortedDates.map(d => dateMap[d]["Agricultural burning"]),
-                backgroundColor: "rgba(234, 179, 8, 0.85)",
-                borderRadius: 4,
+                backgroundColor: "#8f7b2c",
+                borderRadius: 3,
             }
         ];
         this.timelineChart.update();
@@ -270,7 +289,7 @@ class DashboardCharts {
             const coords = feat.geometry.coordinates;
             const tr = document.createElement("tr");
 
-            const badgeColor = this.colors[p.dominant_class] || "#06b6d4";
+            const badgeColor = this.colors[p.dominant_class] || "#b84226";
 
             tr.innerHTML = `
                 <td><strong>#${p.source_cluster_id}</strong></td>

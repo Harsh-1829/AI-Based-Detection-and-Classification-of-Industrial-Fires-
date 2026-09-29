@@ -33,13 +33,13 @@
         _initialBoundsFitted: false,
     };
 
-    // Color definitions
+    // Color definitions — Max Milkin Palette
     const CLASS_COLORS = {
-        "Industrial": "#ef4444",
-        "Forest fire": "#22c55e",
-        "Quarry/Mining": "#f97316",
-        "Agricultural burning": "#eab308",
-        "Vegetation fire (open/scrub)": "#a855f7",
+        "Industrial": "#b84226",
+        "Forest fire": "#3b4039",
+        "Quarry/Mining": "#a86e35",
+        "Agricultural burning": "#8f7b2c",
+        "Vegetation fire (open/scrub)": "#5e5469",
     };
 
     const DISTRICT_BOUNDS = {
@@ -550,18 +550,18 @@
         resultEl.classList.add("hidden");
         mixedEl.classList.add("hidden");
 
-        // Colour palette for WorldCover classes
+        // Colour palette for WorldCover classes — Max Milkin Palette
         const RECON_COLORS = {
-            "Tree cover":             "#22c55e",
-            "Shrubland":              "#84cc16",
-            "Grassland":              "#a3e635",
-            "Cropland":               "#eab308",
-            "Built-up":               "#ef4444",
-            "Bare/sparse vegetation": "#f97316",
-            "Permanent water bodies": "#38bdf8",
-            "Herbaceous wetland":     "#06b6d4",
-            "Mangroves":              "#14b8a6",
-            "Moss and lichen":        "#a78bfa",
+            "Tree cover":             "#3b4039",
+            "Shrubland":              "#525c4e",
+            "Grassland":              "#6d7866",
+            "Cropland":               "#8f7b2c",
+            "Built-up":               "#b84226",
+            "Bare/sparse vegetation": "#a86e35",
+            "Permanent water bodies": "#425660",
+            "Herbaceous wetland":     "#4c6158",
+            "Mangroves":              "#344c3c",
+            "Moss and lichen":        "#5e5469",
         };
 
         try {
@@ -618,9 +618,76 @@
             loadingEl.classList.add("hidden");
             resultEl.classList.remove("hidden");
 
+            // Render/Update Satellite Visual Viewport
+            updateReconSatelliteMap(lat, lon);
+
         } catch (err) {
             console.warn("Satellite recon fetch failed:", err);
             loadingEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>Footprint scan unavailable</span>`;
+        }
+    }
+
+    let reconSatMiniMap = null;
+    let reconSatMiniMarker = null;
+
+    /**
+     * Render or Update Satellite Mini-Map inside Optical Footprint Validation
+     */
+    function updateReconSatelliteMap(lat, lon) {
+        const mapContainer = document.getElementById("recon-sat-map");
+        const linkEl = document.getElementById("recon-sat-link");
+        const coordsEl = document.getElementById("recon-sat-coords");
+        if (!mapContainer || !lat || !lon) return;
+
+        const numLat = parseFloat(lat);
+        const numLon = parseFloat(lon);
+        if (isNaN(numLat) || isNaN(numLon)) return;
+
+        if (coordsEl) {
+            coordsEl.textContent = `${numLat.toFixed(4)}°N, ${numLon.toFixed(4)}°E`;
+        }
+
+        if (linkEl) {
+            linkEl.href = `https://www.google.com/maps/@${numLat},${numLon},18z/data=!3m1!1e3`;
+        }
+
+        try {
+            if (!reconSatMiniMap) {
+                reconSatMiniMap = L.map("recon-sat-map", {
+                    center: [numLat, numLon],
+                    zoom: 17,
+                    zoomControl: false,
+                    attributionControl: false,
+                    dragging: true,
+                    scrollWheelZoom: false,
+                    doubleClickZoom: true,
+                    touchZoom: false
+                });
+
+                // High-resolution satellite tiles (Google Hybrid / Satellite)
+                L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&key=AIzaSyDIaBUtw8BvmtVZ2yBN4hmHXcEJZzUsHbk", {
+                    subdomains: ["0", "1", "2", "3"],
+                    maxZoom: 20
+                }).addTo(reconSatMiniMap);
+
+                const crosshairIcon = L.divIcon({
+                    className: "sat-crosshair-icon",
+                    html: '<div class="sat-crosshair-ring"><div class="sat-crosshair-dot"></div></div>',
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 13]
+                });
+                reconSatMiniMarker = L.marker([numLat, numLon], { icon: crosshairIcon }).addTo(reconSatMiniMap);
+            } else {
+                reconSatMiniMap.setView([numLat, numLon], 17);
+                if (reconSatMiniMarker) {
+                    reconSatMiniMarker.setLatLng([numLat, numLon]);
+                }
+            }
+            setTimeout(() => {
+                if (reconSatMiniMap) reconSatMiniMap.invalidateSize();
+            }, 180);
+        } catch (e) {
+            console.warn("Failed to render recon satellite mini-map:", e);
         }
     }
 

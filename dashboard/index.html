@@ -23,10 +23,10 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/styles.css?v=2026_live_v8">
+    <link rel="stylesheet" href="/static/css/styles.css?v=2026_milkin_v11">
 </head>
 
-<body class="dark-theme">
+<body class="earth-theme">
     <!-- Main Application Shell -->
     <div id="app-container" class="app-container">
 
@@ -561,6 +561,21 @@
                                         <span>Sampling land-cover pixels in VIIRS footprint&hellip;</span>
                                     </div>
                                     <div id="recon-result" class="recon-result hidden">
+                                        <!-- Optical Satellite Imagery Viewport -->
+                                        <div class="recon-sat-preview-wrap">
+                                            <div class="recon-sat-preview-header">
+                                                <span class="recon-sat-title"><i class="fa-solid fa-satellite"></i> Optical Satellite View</span>
+                                                <a id="recon-sat-link" href="#" target="_blank" rel="noopener noreferrer" class="recon-sat-btn" title="Open Google Satellite in new tab">
+                                                    <i class="fa-solid fa-up-right-from-square"></i> Open Google HD
+                                                </a>
+                                            </div>
+                                            <div id="recon-sat-map" class="recon-sat-map-container"></div>
+                                            <div class="recon-sat-coords-bar">
+                                                <span class="recon-sat-res-tag"><i class="fa-solid fa-crosshairs"></i> Thermal Center (Zoom 17)</span>
+                                                <span id="recon-sat-coords" class="recon-sat-coords">--</span>
+                                            </div>
+                                        </div>
+
                                         <div class="recon-label-row">
                                             <span class="recon-sub">Dominant cover in 375m footprint:</span>
                                             <strong id="recon-dominant" class="recon-dominant">&mdash;</strong>
@@ -750,8 +765,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Custom Application Scripts -->
-    <script src="/static/js/charts.js?v=2026_live_v8"></script>
-    <script src="/static/js/app.js?v=2026_live_v8"></script>
+    <script src="/static/js/charts.js?v=2026_milkin_v11"></script>
+    <script src="/static/js/app.js?v=2026_milkin_v11"></script>
 </body>
 
 </html>
