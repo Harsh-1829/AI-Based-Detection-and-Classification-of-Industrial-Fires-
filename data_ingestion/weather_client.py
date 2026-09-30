@@ -1,5 +1,5 @@
 """
-AGNI-VISION — Meteorological Intelligence & Wildfire Feasibility Engine
+ThermalIntel — Meteorological Intelligence & Wildfire Feasibility Engine
 Uses Open-Meteo Keyless Meteorological API to evaluate physical fire feasibility.
 """
 
@@ -36,7 +36,7 @@ def fetch_weather_and_feasibility(latitude: float, longitude: float, predicted_c
     )
 
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "AgniVision-FireWeather/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "ThermalIntel-FireWeather/1.0"})
         with urllib.request.urlopen(req, timeout=4) as response:
             payload = json.loads(response.read().decode("utf-8"))
             current = payload.get("current", {})
